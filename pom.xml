@@ -1,0 +1,116 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.github.christokios</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>0.1</version>
+	<packaging>maven-plugin</packaging>
+
+	<developers>
+		<developer>
+			<name>Chris Christo</name>
+			<email>_c.c@mail.com</email>
+		</developer>
+	</developers>
+
+	<scm>
+		<url>https://github.com/christokios/capsule-maven-plugin</url>
+		<connection>scm:git:https://github.com/christokios/capsule-maven-plugin.git</connection>
+		<developerConnection>scm:git:https://github.com/christokios/capsule-maven-plugin.git</developerConnection>
+	</scm>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java.version>1.8</java.version>
+
+		<maven.compiler.plugin.version>3.1</maven.compiler.plugin.version>
+		<maven.source.plugin.version>2.3</maven.source.plugin.version>
+		<maven.plugin.plugin.version>3.3</maven.plugin.plugin.version>
+		<maven.plugin.api.version>2.0</maven.plugin.api.version>
+		<maven.plugin.annotations.version>3.2</maven.plugin.annotations.version>
+		<plexus.utils.version>3.0.8</plexus.utils.version>
+
+		<aether.version>0.9.0.M2</aether.version>
+
+	</properties>
+
+	<dependencies>
+		<!-- REQUIRED -->
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-plugin-api</artifactId>
+			<version>${maven.plugin.api.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.aether</groupId>
+			<artifactId>aether-api</artifactId>
+			<version>${aether.version}</version>
+		</dependency>
+
+		<!-- PROVIDED -->
+		<dependency>
+			<groupId>org.apache.maven.plugin-tools</groupId>
+			<artifactId>maven-plugin-annotations</artifactId>
+			<version>${maven.plugin.annotations.version}</version>
+			<!--<scope>provided</scope>-->
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+
+			<!-- COMPILER -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin.version}</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+				</configuration>
+			</plugin>
+
+			<!-- SOURCES JAR -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>${maven.source.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-plugin-plugin</artifactId>
+				<version>${maven.plugin.plugin.version}</version>
+				<configuration>
+					<goalPrefix>capsule</goalPrefix>
+					<skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+				</configuration>
+				<executions>
+					<execution>
+						<id>mojo-descriptor</id>
+						<goals>
+							<goal>descriptor</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>help-goal</id>
+						<goals>
+							<goal>helpmojo</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+	</build>
+</project>
