@@ -55,3 +55,7 @@ You can also specify a maven property for the capsule version:
 </properties>
 ```
 
+## License
+
+This demo project is released under the [MIT license](http://opensource.org/licenses/MIT).
+
