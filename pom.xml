@@ -4,7 +4,7 @@
 
 	<groupId>com.github.christokios</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
-	<version>0.1</version>
+	<version>0.2</version>
 	<packaging>maven-plugin</packaging>
 
 	<developers>
@@ -20,6 +20,18 @@
 		<developerConnection>scm:git:https://github.com/christokios/capsule-maven-plugin.git</developerConnection>
 	</scm>
 
+	<name>Capsule Maven Plugin</name>
+	<description>The maven plugin to build capsules of your jars.</description>
+	<url>https://github.com/christokios/capsule-maven-plugin</url>
+
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>http://www.opensource.org/licenses/mit-license.php</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.version>1.8</java.version>
@@ -27,35 +39,38 @@
 		<maven.compiler.plugin.version>3.1</maven.compiler.plugin.version>
 		<maven.source.plugin.version>2.3</maven.source.plugin.version>
 		<maven.plugin.plugin.version>3.3</maven.plugin.plugin.version>
-		<maven.plugin.api.version>2.0</maven.plugin.api.version>
+		<maven.plugin.api.version>3.2.2</maven.plugin.api.version>
 		<maven.plugin.annotations.version>3.2</maven.plugin.annotations.version>
-		<plexus.utils.version>3.0.8</plexus.utils.version>
-
-		<aether.version>0.9.0.M2</aether.version>
-
+		<aether.version>1.0.0.v20140518</aether.version>
 	</properties>
 
 	<dependencies>
-		<!-- REQUIRED -->
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-plugin-api</artifactId>
 			<version>${maven.plugin.api.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>org.apache.maven.plugin-tools</groupId>
+			<artifactId>maven-plugin-annotations</artifactId>
+			<version>${maven.plugin.annotations.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-project</artifactId>
+			<version>3.0-alpha-2</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.maven</groupId>
+					<artifactId>maven-artifact</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
 			<groupId>org.eclipse.aether</groupId>
 			<artifactId>aether-api</artifactId>
 			<version>${aether.version}</version>
 		</dependency>
-
-		<!-- PROVIDED -->
-		<dependency>
-			<groupId>org.apache.maven.plugin-tools</groupId>
-			<artifactId>maven-plugin-annotations</artifactId>
-			<version>${maven.plugin.annotations.version}</version>
-			<!--<scope>provided</scope>-->
-		</dependency>
-
 	</dependencies>
 
 	<build>
