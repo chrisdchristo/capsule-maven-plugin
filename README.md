@@ -5,6 +5,8 @@ This a maven plugin to build a capsule out of your jar file.
 
 See more at [capsule](https://github.com/puniverse/capsule).
 
+Also see the [demo on how to use this plugin](https://github.com/christokios/capsule-maven-plugin-demo).
+
 ## Building from source
 Clone the project and run a maven install:
 
@@ -18,7 +20,7 @@ mvn install
 To build a capsule for your project, add the following to the build section of your pom.xml:
 
 ```
-<!-- BUILD CAPSULE -->
+<!-- BUILD CAPSULES -->
 <plugin>
 	<groupId>com.github.christokios</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
@@ -35,17 +37,23 @@ To build a capsule for your project, add the following to the build section of y
 				<mainClass>hello.HelloWorld</mainClass>
 
 				<!-- OPTIONAL -->
-				<!--<target>otherOutputDirectory/</target>-->
-				<!--<finalName>otherFinalName</finalName>-->
-				<!--<minJavaVersion>1.8.0</minJavaVersion>-->
-				<!--<extractCapsule>true</extractCapsule>-->
-				<!--<jvmArgs>-Xmx512m</jvmArgs>-->
+				<outputDir>target/</outputDir>
 				<properties>
 					<property>
 						<name>propertyName1</name>
 						<value>propertyValue1</value>
 					</property>
 				</properties>
+				<manifest>
+					<property>
+						<name>JVM-Args</name>
+						<value>-Xmx512m</value>
+					</property>
+					<property>
+						<name>Min-Java-Version</name>
+						<value>1.8.0</value>
+					</property>
+				</manifest>
 
 			</configuration>
 		</execution>
@@ -56,18 +64,12 @@ To build a capsule for your project, add the following to the build section of y
 This will build the three types of capsules of your app. The 'full' type, the 'thin' type and the 'empty' type.
 See more at [capsule](https://github.com/puniverse/capsule) for more about the three different types of capsules.
 
-```
-<mainClass>: The main class file name (with package declaration) of your app that the capsule should run.
+* `<mainClass>`: The main class file name (with package declaration) of your app that the capsule should run.
+* `<outputDir> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
+* `<properties> (Optional)`: The system properties to provide the app with.
+* `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies`, `System-Properties` as these are generated automatically.
 
-<target>: Specifies the output directory. Defaults to the ${project.build.directory}.
-<finalName>: Specifies the finalName of the project. Defaults to the ${project.build.finalName}.
-<minJavaVersion>: The minimum java version required.
-<extractCapsule>: Whether the jar should be extracted. This is only for the the 'thin' capsule type.
-<jvmArgs>: The jvm args that will be applied when the app is run.
-<properties>: The system properties to provide the app with.
-```
-
-You can also specify a maven property for the capsule version:
+You can also specify a maven property for the capsule version (This will be the version of capsule to package within the build of the capsules):
 
 ```
 <properties>

@@ -31,47 +31,52 @@ public class CapsuleMojo extends AbstractMojo {
 	@Parameter(defaultValue = "${project}", readonly = true)
 	private MavenProject mavenProject;
 
-	/**** AETHER REPO LINK ***/
+	/**
+	 * * AETHER REPO LINK **
+	 */
 	@Component
 	private RepositorySystem repoSystem;
 	@Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
 	private RepositorySystemSession repoSession;
 	@Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
 	private List<RemoteRepository> remoteRepos;
+	@Parameter(defaultValue = "${project.build.finalName}", readonly = true)
+	private String finalName;
 
-	/**** REQUIRED VARIABLES ***/
+	/**
+	 * * REQUIRED VARIABLES **
+	 */
 	@Parameter(property = "capsule.mainClass", required = true)
 	private String mainClass;
 
-	/**** OPTIONAL VARIABLES ***/
-	@Parameter(property = "capsule.target", defaultValue = "${project.build.directory}")
-	private File target;
-	@Parameter(property = "capsule.finalName", defaultValue = "${project.build.finalName}")
-	private String finalName;
-	@Parameter(property = "capsule.extractCapsule", defaultValue = "false")
-	private String extractCapsule;
-	@Parameter(property = "capsule.minJavaVersion", defaultValue = "1.8.0")
-	private String minJavaVersion;
+	/**
+	 * * OPTIONAL VARIABLES **
+	 */
 	@Parameter(property = "capsule.version", defaultValue = "0.6.0-SNAPSHOT")
 	private String capsuleVersion;
-	@Parameter(property = "capsule.jvmArgs", defaultValue = "")
-	private String jvmArgs;
+	@Parameter(property = "capsule.outputDir", defaultValue = "${project.build.directory}")
+	private File outputDir;
+
 	@Parameter
 	private Properties properties; // System-Properties for the app
+	@Parameter
+	private Properties manifest; // additional manifest entries
 
-	/**** DEPENDENCIES ***/
+	/**
+	 * * DEPENDENCIES **
+	 */
 	@Parameter(defaultValue = "${project.artifacts}") // will only contain scope of compile+runtime
 	private Collection<Artifact> artifacts;
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		getLog().info("[Capsule] Capsule Version: " + capsuleVersion.toString());
-		getLog().info("[Capsule] Target: " + target.toString());
-		getLog().info("[Capsule] Final Name: " + finalName);
+		getLog().info("[Capsule] Output Directory: " + outputDir.toString());
 		getLog().info("[Capsule] Main Class: " + mainClass);
-		getLog().info("[Capsule] Extract Capsule: " + extractCapsule);
-		getLog().info("[Capsule] Min Java Version: " + minJavaVersion);
-		getLog().info("[Capsule] JVM Args: " + jvmArgs);
+		if (manifest != null) {
+			getLog().info("[Capsule] Manifest Entries: ");
+			for (final Map.Entry property : manifest.entrySet()) getLog().info("\t\t\\--" + property.getKey() + ": " + property.getValue());
+		}
 		if (properties != null) {
 			getLog().info("[Capsule] System Properties: ");
 			for (final Map.Entry property : properties.entrySet()) getLog().info("\t\t\\--" + property.getKey() + "=" + property.getValue());
@@ -93,11 +98,11 @@ public class CapsuleMojo extends AbstractMojo {
 	 * Build the empty version of the capsule, i.e the the app and its dependencies will be downloaded at runtime.
 	 */
 	public final void buildEmpty() throws IOException {
-		final JarOutputStream jar = openJar(target, finalName, Type.empty);
+		final JarOutputStream jar = openJar(outputDir, finalName, Type.empty);
 
 		// add manifest (plus Application)
 		final Map<String, String> additionalAttributes = new HashMap();
-		additionalAttributes.put("Application", mavenProject.getGroupId() + ":" + mavenProject.getArtifactId() + ":" + mavenProject.getVersion());
+		additionalAttributes.put("Application", mavenProject.getGroupId() + ":" + mavenProject.getArtifactId());
 		deployManifestToJar(jar, additionalAttributes);
 
 		// add Capsule classes
@@ -112,7 +117,7 @@ public class CapsuleMojo extends AbstractMojo {
 	 * Build the thin version of the capsule (i.e no dependencies). The dependencies will be resolved at runtime.
 	 */
 	public final void buildThin() throws IOException {
-		final JarOutputStream jar = openJar(target, finalName, Type.thin);
+		final JarOutputStream jar = openJar(outputDir, finalName, Type.thin);
 
 		// add manifest (with Dependencies list)
 		final Map<String, String> additionalAttributes = new HashMap();
@@ -120,11 +125,10 @@ public class CapsuleMojo extends AbstractMojo {
 		for (final Artifact artifact : artifacts)
 			dependenciesList.append(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion() + " ");
 		additionalAttributes.put("Dependencies", dependenciesList.toString());
-		additionalAttributes.put("Extract-Capsule", extractCapsule);
 		deployManifestToJar(jar, additionalAttributes);
 
 		// add compiled project classes
-		final File classesDir = new File(target, "classes");
+		final File classesDir = new File(outputDir, "classes");
 		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
 			@Override
 			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
@@ -146,13 +150,13 @@ public class CapsuleMojo extends AbstractMojo {
 	 * Build the full version of the capsule which includes the dependencies embedded.
 	 */
 	public final void buildFull() throws IOException {
-		final JarOutputStream jar = openJar(target, finalName, Type.full);
+		final JarOutputStream jar = openJar(outputDir, finalName, Type.full);
 
 		// add manifest
 		deployManifestToJar(jar, null);
 
 		// add main jar
-		final File mainJarFile = new File(target, finalName + ".jar");
+		final File mainJarFile = new File(outputDir, finalName + ".jar");
 		addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jar);
 
 		// add dependencies
@@ -165,25 +169,28 @@ public class CapsuleMojo extends AbstractMojo {
 		IOUtil.close(jar);
 	}
 
-	/**** UTILS ****************************************************************/
+	/**
+	 * * UTILS ***************************************************************
+	 */
 
 	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes) throws IOException {
-		final Manifest manifest = new Manifest();
-		final Attributes attributes = manifest.getMainAttributes();
+		final Manifest manifestBuild = new Manifest();
+		final Attributes attributes = manifestBuild.getMainAttributes();
 		attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
 		attributes.put(Attributes.Name.MAIN_CLASS, "Capsule");
-		attributes.put(new Attributes.Name("Application-Class"), mainClass);
-		attributes.put(new Attributes.Name("Min-Java-Version"), minJavaVersion);
+		attributes.put(new Attributes.Name("Application-Class"), this.mainClass);
 
-		if (properties != null) {
+		if (this.properties != null) {
 			final StringBuilder propertiesList = new StringBuilder();
-			for (final Map.Entry<Object, Object> property : properties.entrySet())
+			for (final Map.Entry<Object, Object> property : this.properties.entrySet())
 				propertiesList.append(property.getKey() + "=" + property.getValue() + " ");
 			attributes.put(new Attributes.Name("System-Properties"), propertiesList.toString());
 		}
 
-		if (jvmArgs != null && !jvmArgs.isEmpty())
-			attributes.put(new Attributes.Name("JVM-Args"), jvmArgs);
+		// custom user defined manifest entries
+		if (this.manifest != null)
+			for (final Map.Entry<Object, Object> property : this.manifest.entrySet())
+				attributes.put(new Attributes.Name(property.getKey().toString()), property.getValue());
 
 		// additional attributes
 		if (additionalAttributes != null)
@@ -192,7 +199,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// write to jar
 		final ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
-		manifest.write(dataStream);
+		manifestBuild.write(dataStream);
 		final byte[] bytes = dataStream.toByteArray();
 		final ByteArrayInputStream manifestInputStream = new ByteArrayInputStream(bytes);
 		return addToJar(JarFile.MANIFEST_NAME, manifestInputStream, jar);
@@ -234,13 +241,15 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private File resolveCapsule() throws IOException {
 		final ArtifactResult artifactResult;
-		try { artifactResult = this.resolve("co.paralleluniverse", "capsule", capsuleVersion); }
-		catch (final ArtifactResolutionException e) { throw new IOException("Capsule not found from repos"); }
+		try { artifactResult = this.resolve("co.paralleluniverse", "capsule", capsuleVersion); } catch (final ArtifactResolutionException e) {
+			throw new IOException("Capsule not found from repos");
+		}
 		return artifactResult.getArtifact().getFile();
 	}
 
 	private final ArtifactResult resolve(final String groupId, final String artifactId, final String version) throws ArtifactResolutionException {
-		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(groupId + ":" + artifactId + ":" + version), remoteRepos, null));
+		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(groupId + ":" + artifactId + ":" + version), remoteRepos,
+			null));
 	}
 
 	public static enum Type {
@@ -248,5 +257,4 @@ public class CapsuleMojo extends AbstractMojo {
 		thin,
 		full
 	}
-
 }
