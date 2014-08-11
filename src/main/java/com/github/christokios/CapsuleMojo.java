@@ -1,6 +1,9 @@
 package com.github.christokios;
 
+import javafx.util.Pair;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Exclusion;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -27,6 +30,12 @@ import java.util.zip.ZipEntry;
 
 @Mojo(name = "capsule", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
 public class CapsuleMojo extends AbstractMojo {
+
+	public static enum Type {
+		empty,
+		thin,
+		full
+	}
 
 	@Parameter(defaultValue = "${project}", readonly = true)
 	private MavenProject mavenProject;
@@ -56,6 +65,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private String capsuleVersion;
 	@Parameter(property = "capsule.outputDir", defaultValue = "${project.build.directory}")
 	private File outputDir;
+	@Parameter(property = "capsule.buildExec", defaultValue = "false")
+	private String buildExec;
 
 	@Parameter
 	private Properties properties; // System-Properties for the app
@@ -81,8 +92,22 @@ public class CapsuleMojo extends AbstractMojo {
 			getLog().info("[Capsule] System Properties: ");
 			for (final Map.Entry property : properties.entrySet()) getLog().info("\t\t\\--" + property.getKey() + "=" + property.getValue());
 		}
+
 		getLog().info("[Capsule] Dependencies: ");
-		for (final Artifact artifact : artifacts) getLog().info("\t\t\\--" + artifact);
+		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies()) {
+			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime")) {
+				if (dependency.getExclusions().size() == 0)
+					getLog().info("\t\t\\--" + dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion());
+				else {
+					final StringBuilder exclusionsList = new StringBuilder();
+					for (final Exclusion exclusion : dependency.getExclusions()) {
+						if (dependency.getExclusions().size() > 1) exclusionsList.append(",");
+						exclusionsList.append(exclusion.getGroupId() + ":" + exclusion.getArtifactId());
+					}
+					getLog().info("\t\t\\--" + dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion() + "(" + exclusionsList + ")");
+				}
+			}
+		}
 
 		try {
 			buildEmpty();
@@ -98,34 +123,49 @@ public class CapsuleMojo extends AbstractMojo {
 	 * Build the empty version of the capsule, i.e the the app and its dependencies will be downloaded at runtime.
 	 */
 	public final void buildEmpty() throws IOException {
-		final JarOutputStream jar = openJar(outputDir, finalName, Type.empty);
+		final Pair<File, JarOutputStream> jar = openJar(Type.empty);
+		final JarOutputStream jarStream = jar.getValue();
 
 		// add manifest (plus Application)
 		final Map<String, String> additionalAttributes = new HashMap();
-		additionalAttributes.put("Application", mavenProject.getGroupId() + ":" + mavenProject.getArtifactId());
-		deployManifestToJar(jar, additionalAttributes);
+		additionalAttributes.put("Application", mavenProject.getGroupId() + ":" + mavenProject.getArtifactId() + ":" + mavenProject.getVersion());
+		deployManifestToJar(jarStream, additionalAttributes, Type.empty);
 
 		// add Capsule classes
 		final Map<String, byte[]> otherCapsuleClasses = getAllCapsuleClasses();
 		for (final Map.Entry<String, byte[]> entry : otherCapsuleClasses.entrySet())
-			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jar);
+			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
-		IOUtil.close(jar);
+		IOUtil.close(jarStream);
+		this.createExecCopy(jar.getKey());
 	}
 
 	/**
 	 * Build the thin version of the capsule (i.e no dependencies). The dependencies will be resolved at runtime.
 	 */
 	public final void buildThin() throws IOException {
-		final JarOutputStream jar = openJar(outputDir, finalName, Type.thin);
+		final Pair<File, JarOutputStream> jar = openJar(Type.thin);
+		final JarOutputStream jarStream = jar.getValue();
 
 		// add manifest (with Dependencies list)
 		final Map<String, String> additionalAttributes = new HashMap();
 		final StringBuilder dependenciesList = new StringBuilder();
-		for (final Artifact artifact : artifacts)
-			dependenciesList.append(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion() + " ");
+		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies()) {
+			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime")) {
+				dependenciesList.append(dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion());
+				if (dependency.getExclusions().size() > 0) {
+					final StringBuilder exclusionsList = new StringBuilder();
+					for (final Exclusion exclusion : dependency.getExclusions()) {
+						if (dependency.getExclusions().size() > 1) exclusionsList.append(",");
+						exclusionsList.append(exclusion.getGroupId() + ":" + exclusion.getArtifactId());
+					}
+					dependenciesList.append("(" + exclusionsList.toString() + ")");
+				}
+				dependenciesList.append(" ");
+			}
+		}
 		additionalAttributes.put("Dependencies", dependenciesList.toString());
-		deployManifestToJar(jar, additionalAttributes);
+		deployManifestToJar(jarStream, additionalAttributes, Type.thin);
 
 		// add compiled project classes
 		final File classesDir = new File(outputDir, "classes");
@@ -133,7 +173,7 @@ public class CapsuleMojo extends AbstractMojo {
 			@Override
 			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
 				if (!attrs.isDirectory())
-					addToJar(path.toString().substring(path.toString().indexOf("classes/") + 8), new FileInputStream(path.toFile()), jar);
+					addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(path.toFile()), jarStream);
 				return FileVisitResult.CONTINUE;
 			}
 		});
@@ -141,44 +181,48 @@ public class CapsuleMojo extends AbstractMojo {
 		// add Capsule classes
 		final Map<String, byte[]> capsuleClasses = getAllCapsuleClasses();
 		for (final Map.Entry<String, byte[]> entry : capsuleClasses.entrySet())
-			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jar);
+			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
-		IOUtil.close(jar);
+		IOUtil.close(jarStream);
+		this.createExecCopy(jar.getKey());
 	}
 
 	/**
 	 * Build the full version of the capsule which includes the dependencies embedded.
 	 */
 	public final void buildFull() throws IOException {
-		final JarOutputStream jar = openJar(outputDir, finalName, Type.full);
+		final Pair<File, JarOutputStream> jar = openJar(Type.full);
+		final JarOutputStream jarStream = jar.getValue();
 
 		// add manifest
-		deployManifestToJar(jar, null);
+		deployManifestToJar(jarStream, null, Type.full);
 
 		// add main jar
 		final File mainJarFile = new File(outputDir, finalName + ".jar");
-		addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jar);
+		addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jarStream);
 
 		// add dependencies
 		for (final Artifact artifact : artifacts)
-			addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
+			addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
 
 		// add Capsule.class
-		addToJar("Capsule.class", new ByteArrayInputStream(getCapsuleClass()), jar);
+		this.addToJar("Capsule.class", new ByteArrayInputStream(getCapsuleClass()), jarStream);
 
-		IOUtil.close(jar);
+		IOUtil.close(jarStream);
+		this.createExecCopy(jar.getKey());
 	}
 
 	/**
 	 * * UTILS ***************************************************************
 	 */
 
-	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes) throws IOException {
+	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes, final Type type) throws IOException {
 		final Manifest manifestBuild = new Manifest();
 		final Attributes attributes = manifestBuild.getMainAttributes();
 		attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
 		attributes.put(Attributes.Name.MAIN_CLASS, "Capsule");
 		attributes.put(new Attributes.Name("Application-Class"), this.mainClass);
+		attributes.put(new Attributes.Name("Application-Name"), this.finalName + "-capsule-" + type);
 
 		if (this.properties != null) {
 			final StringBuilder propertiesList = new StringBuilder();
@@ -233,10 +277,10 @@ public class CapsuleMojo extends AbstractMojo {
 		return jar;
 	}
 
-	private JarOutputStream openJar(final File target, final String projectName, final Type type) throws IOException {
-		final File file = new File(target, projectName + "-capsule-" + type.toString() + ".jar");
+	private Pair<File, JarOutputStream> openJar(final Type type) throws IOException {
+		final File file = new File(outputDir, finalName + "-capsule-" + type.toString() + ".jar");
 		getLog().info("[Capsule] Created: " + file.getName());
-		return new JarOutputStream(new FileOutputStream(file));
+		return new Pair(file, new JarOutputStream(new FileOutputStream(file)));
 	}
 
 	private File resolveCapsule() throws IOException {
@@ -247,14 +291,29 @@ public class CapsuleMojo extends AbstractMojo {
 		return artifactResult.getArtifact().getFile();
 	}
 
-	private final ArtifactResult resolve(final String groupId, final String artifactId, final String version) throws ArtifactResolutionException {
+	private ArtifactResult resolve(final String groupId, final String artifactId, final String version) throws ArtifactResolutionException {
 		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(groupId + ":" + artifactId + ":" + version), remoteRepos,
 			null));
 	}
 
-	public static enum Type {
-		empty,
-		thin,
-		full
+	private void createExecCopy(final File jar) throws IOException {
+		if (this.buildExec.equals("true") || this.buildExec.equals("1")) {
+			final File exec = new File(jar.getPath().replace(".jar", ".x"));
+			FileOutputStream out = null;
+			FileInputStream in = null;
+			try {
+				out = new FileOutputStream(exec);
+				in = new FileInputStream(jar);
+				out.write(("#!/bin/sh\n\nexec java " + " -jar \"$0\" \"$@\"\n\n").getBytes("ASCII"));
+				Files.copy(jar.toPath(), out);
+				out.flush();
+				Runtime.getRuntime().exec("chmod +x " + exec.getAbsolutePath());
+			} finally {
+				IOUtil.close(in);
+				IOUtil.close(out);
+				getLog().info("[Capsule] Created: " + exec.getName());
+			}
+		}
 	}
+
 }
