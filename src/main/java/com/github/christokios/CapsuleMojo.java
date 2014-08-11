@@ -31,6 +31,9 @@ import java.util.zip.ZipEntry;
 @Mojo(name = "capsule", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
 public class CapsuleMojo extends AbstractMojo {
 
+	public static final String DEFAULT_CAPSULE_NAME = "Capsule";
+	public static final String DEFAULT_CAPSULE_CLASS = DEFAULT_CAPSULE_NAME + ".class";
+
 	public static enum Type {
 		empty,
 		thin,
@@ -206,7 +209,7 @@ public class CapsuleMojo extends AbstractMojo {
 			addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
 
 		// add Capsule.class
-		this.addToJar("Capsule.class", new ByteArrayInputStream(getCapsuleClass()), jarStream);
+		this.addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.getKey());
@@ -220,7 +223,7 @@ public class CapsuleMojo extends AbstractMojo {
 		final Manifest manifestBuild = new Manifest();
 		final Attributes attributes = manifestBuild.getMainAttributes();
 		attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-		attributes.put(Attributes.Name.MAIN_CLASS, "Capsule");
+		attributes.put(Attributes.Name.MAIN_CLASS, DEFAULT_CAPSULE_NAME);
 		attributes.put(new Attributes.Name("Application-Class"), this.mainClass);
 		attributes.put(new Attributes.Name("Application-Name"), this.finalName + "-capsule-" + type);
 
@@ -254,7 +257,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		JarEntry entry;
 		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
-			if (entry.getName().equals("Capsule.class"))
+			if (entry.getName().equals(DEFAULT_CAPSULE_CLASS))
 				return IOUtil.toByteArray(capsuleJarInputStream);
 		return null;
 	}
@@ -265,8 +268,9 @@ public class CapsuleMojo extends AbstractMojo {
 		final Map<String, byte[]> otherClasses = new HashMap();
 		JarEntry entry;
 		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
-			if (entry.getName().contains("capsule/") || entry.getName().equals("Capsule.class"))
+			if (entry.getName().contains("capsule/") || entry.getName().equals(DEFAULT_CAPSULE_CLASS))
 				otherClasses.put(entry.getName(), IOUtil.toByteArray(capsuleJarInputStream));
+
 		return otherClasses;
 	}
 
