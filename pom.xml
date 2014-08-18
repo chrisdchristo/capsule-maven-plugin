@@ -4,7 +4,7 @@
 
 	<groupId>com.github.christokios</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
-	<version>0.6.0</version>
+	<version>0.7.0-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
 	<developers>

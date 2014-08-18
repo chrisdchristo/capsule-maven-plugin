@@ -34,7 +34,7 @@ To build a capsule for your project, add the following to the build section of y
 			<configuration>
 
 				<!-- REQUIRED -->
-				<mainClass>hello.HelloWorld</mainClass>
+				<appClass>hello.HelloWorld</appClass>
 
 				<!-- OPTIONAL -->
 				<outputDir>target/</outputDir>
@@ -64,7 +64,7 @@ To build a capsule for your project, add the following to the build section of y
 This will build the three types of capsules of your app. The 'full' type, the 'thin' type and the 'empty' type.
 See more at [capsule](https://github.com/puniverse/capsule) for more about the three different types of capsules.
 
-* `<mainClass>`: The main class file name (with package declaration) of your app that the capsule should run.
+* `<appClass>`: The class with the main method (with package declaration) of your app that the capsule should run.
 * `<outputDir> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
 * `<buildExec> (Optional)`: If executable (chmod +x) versions of the capsules should be built (Applicable for Mac/Unix style systems). See [here](https://github.com/brianm/really-executable-jars-maven-plugin) and [here](http://skife.org/java/unix/2011/06/20/really_executable_jars.html) for more info. Defaults to false.
 * `<properties> (Optional)`: The system properties to provide the app with.
@@ -74,8 +74,19 @@ You can also specify a maven property for the capsule version (This will be the 
 
 ```
 <properties>
-	<capsule.version>0.6.0</capsule.version>
+	<capsule.version>0.7.0</capsule.version>
 </properties>
+```
+
+If you want to specify your custom Capsule class, add a manifest entry pointing to it:
+
+```
+<manifest>
+	<property>
+		<name>Main-Class</name>
+		<value>MyCapsule</value>
+	</property>
+</manifest>
 ```
 
 ## License

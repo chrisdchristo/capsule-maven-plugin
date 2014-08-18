@@ -31,6 +31,7 @@ import java.util.zip.ZipEntry;
 @Mojo(name = "capsule", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
 public class CapsuleMojo extends AbstractMojo {
 
+	public static final String CAPSULE_GROUP = "co.paralleluniverse";
 	public static final String DEFAULT_CAPSULE_NAME = "Capsule";
 	public static final String DEFAULT_CAPSULE_CLASS = DEFAULT_CAPSULE_NAME + ".class";
 
@@ -58,8 +59,8 @@ public class CapsuleMojo extends AbstractMojo {
 	/**
 	 * * REQUIRED VARIABLES **
 	 */
-	@Parameter(property = "capsule.mainClass", required = true)
-	private String mainClass;
+	@Parameter(property = "capsule.appClass", required = true)
+	private String appClass;
 
 	/**
 	 * * OPTIONAL VARIABLES **
@@ -76,6 +77,8 @@ public class CapsuleMojo extends AbstractMojo {
 	@Parameter
 	private Properties manifest; // additional manifest entries
 
+	private String mainClass = DEFAULT_CAPSULE_NAME;
+
 	/**
 	 * * DEPENDENCIES **
 	 */
@@ -84,9 +87,15 @@ public class CapsuleMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
+		// check for custom capsule main class
+		if (manifest.getProperty(Attributes.Name.MAIN_CLASS.toString()) != null)
+			mainClass = (String) manifest.getProperty(Attributes.Name.MAIN_CLASS.toString());
+
 		getLog().info("[Capsule] Capsule Version: " + capsuleVersion.toString());
 		getLog().info("[Capsule] Output Directory: " + outputDir.toString());
-		getLog().info("[Capsule] Main Class: " + mainClass);
+		getLog().info("[Capsule] Application-Class: " + appClass);
+		getLog().info("[Capsule] Main-Class: " + mainClass);
+
 		if (manifest != null) {
 			getLog().info("[Capsule] Manifest Entries: ");
 			for (final Map.Entry property : manifest.entrySet()) getLog().info("\t\t\\--" + property.getKey() + ": " + property.getValue());
@@ -138,6 +147,9 @@ public class CapsuleMojo extends AbstractMojo {
 		final Map<String, byte[]> otherCapsuleClasses = getAllCapsuleClasses();
 		for (final Map.Entry<String, byte[]> entry : otherCapsuleClasses.entrySet())
 			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
+
+		// add custom capsule class (if exists)
+		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.getKey());
@@ -211,20 +223,23 @@ public class CapsuleMojo extends AbstractMojo {
 		// add Capsule.class
 		this.addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
 
+		// add custom capsule class (if exists)
+		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
+
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.getKey());
 	}
 
 	/**
-	 * * UTILS ***************************************************************
+	 * UTILS
 	 */
 
 	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes, final Type type) throws IOException {
 		final Manifest manifestBuild = new Manifest();
 		final Attributes attributes = manifestBuild.getMainAttributes();
 		attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-		attributes.put(Attributes.Name.MAIN_CLASS, DEFAULT_CAPSULE_NAME);
-		attributes.put(new Attributes.Name("Application-Class"), this.mainClass);
+		attributes.put(Attributes.Name.MAIN_CLASS, mainClass);
+		attributes.put(new Attributes.Name("Application-Class"), this.appClass);
 		attributes.put(new Attributes.Name("Application-Name"), this.finalName + "-capsule-" + type);
 
 		if (this.properties != null) {
@@ -250,6 +265,20 @@ public class CapsuleMojo extends AbstractMojo {
 		final byte[] bytes = dataStream.toByteArray();
 		final ByteArrayInputStream manifestInputStream = new ByteArrayInputStream(bytes);
 		return addToJar(JarFile.MANIFEST_NAME, manifestInputStream, jar);
+	}
+
+	private void addCustomCapsuleClass(final JarOutputStream jarStream) throws IOException {
+		final File classesDir = new File(outputDir, "classes");
+		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
+				if (!attrs.isDirectory() && path.toString().contains(mainClass)) {
+					addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(path.toFile()), jarStream);
+					return FileVisitResult.TERMINATE;
+				}
+				return FileVisitResult.CONTINUE;
+			}
+		});
 	}
 
 	private byte[] getCapsuleClass() throws IOException {
@@ -289,7 +318,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private File resolveCapsule() throws IOException {
 		final ArtifactResult artifactResult;
-		try { artifactResult = this.resolve("co.paralleluniverse", "capsule", capsuleVersion); } catch (final ArtifactResolutionException e) {
+		try { artifactResult = this.resolve(CAPSULE_GROUP, "capsule", capsuleVersion); } catch (final ArtifactResolutionException e) {
 			throw new IOException("Capsule not found from repos");
 		}
 		return artifactResult.getArtifact().getFile();
