@@ -38,7 +38,7 @@ public class CapsuleMojo extends AbstractMojo {
 	public static enum Type {
 		empty,
 		thin,
-		full
+		fat
 	}
 
 	@Parameter(defaultValue = "${project}", readonly = true)
@@ -124,7 +124,7 @@ public class CapsuleMojo extends AbstractMojo {
 		try {
 			buildEmpty();
 			buildThin();
-			buildFull();
+			buildFat();
 		} catch (final IOException e) {
 			e.printStackTrace();
 			throw new MojoFailureException(e.getMessage());
@@ -203,14 +203,14 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	/**
-	 * Build the full version of the capsule which includes the dependencies embedded.
+	 * Build the fat version of the capsule which includes the dependencies embedded.
 	 */
-	public final void buildFull() throws IOException {
-		final Pair<File, JarOutputStream> jar = openJar(Type.full);
+	public final void buildFat() throws IOException {
+		final Pair<File, JarOutputStream> jar = openJar(Type.fat);
 		final JarOutputStream jarStream = jar.getValue();
 
 		// add manifest
-		deployManifestToJar(jarStream, null, Type.full);
+		deployManifestToJar(jarStream, null, Type.fat);
 
 		// add main jar
 		final File mainJarFile = new File(outputDir, finalName + ".jar");
@@ -297,7 +297,7 @@ public class CapsuleMojo extends AbstractMojo {
 		final Map<String, byte[]> otherClasses = new HashMap();
 		JarEntry entry;
 		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
-			if (entry.getName().contains("capsule/") || entry.getName().equals(DEFAULT_CAPSULE_CLASS))
+			if (entry.getName().contains("capsule") || entry.getName().equals(DEFAULT_CAPSULE_CLASS))
 				otherClasses.put(entry.getName(), IOUtil.toByteArray(capsuleJarInputStream));
 
 		return otherClasses;

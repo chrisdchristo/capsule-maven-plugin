@@ -61,7 +61,7 @@ To build a capsule for your project, add the following to the build section of y
 </plugin>
 ```
 
-This will build the three types of capsules of your app. The 'full' type, the 'thin' type and the 'empty' type.
+This will build the three types of capsules of your app. The 'fat' type, the 'thin' type and the 'empty' type.
 See more at [capsule](https://github.com/puniverse/capsule) for more about the three different types of capsules.
 
 * `<appClass>`: The class with the main method (with package declaration) of your app that the capsule should run.
@@ -74,7 +74,7 @@ You can also specify a maven property for the capsule version (This will be the 
 
 ```
 <properties>
-	<capsule.version>0.7.0</capsule.version>
+	<capsule.version>0.7.1</capsule.version>
 </properties>
 ```
 
