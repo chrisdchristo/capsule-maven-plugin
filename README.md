@@ -1,6 +1,8 @@
 Capsule Maven Plugin
 ====================
 
+Latest version is deployed on [maven central][http://search.maven.org/#artifactdetails%7Ccom.github.christokios%7Ccapsule-maven-plugin%7C0.7.1%7Cmaven-plugin].
+
 This a maven plugin to build a capsule out of your jar file.
 
 See more at [capsule](https://github.com/puniverse/capsule).
