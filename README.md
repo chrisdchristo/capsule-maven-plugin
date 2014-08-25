@@ -80,6 +80,8 @@ You can also specify a maven property for the capsule version (This will be the 
 </properties>
 ```
 
+otherwise the latest version of capsule will be used.
+
 If you want to specify your custom Capsule class, add a manifest entry pointing to it:
 
 ```
