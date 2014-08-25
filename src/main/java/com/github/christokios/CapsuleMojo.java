@@ -14,9 +14,7 @@ import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.resolution.ArtifactRequest;
-import org.eclipse.aether.resolution.ArtifactResolutionException;
-import org.eclipse.aether.resolution.ArtifactResult;
+import org.eclipse.aether.resolution.*;
 
 import java.io.*;
 import java.nio.file.FileVisitResult;
@@ -65,7 +63,7 @@ public class CapsuleMojo extends AbstractMojo {
 	/**
 	 * * OPTIONAL VARIABLES **
 	 */
-	@Parameter(property = "capsule.version", defaultValue = "0.6.0-SNAPSHOT")
+	@Parameter(property = "capsule.version")
 	private String capsuleVersion;
 	@Parameter(property = "capsule.outputDir", defaultValue = "${project.build.directory}")
 	private File outputDir;
@@ -90,6 +88,18 @@ public class CapsuleMojo extends AbstractMojo {
 		// check for custom capsule main class
 		if (manifest.getProperty(Attributes.Name.MAIN_CLASS.toString()) != null)
 			mainClass = (String) manifest.getProperty(Attributes.Name.MAIN_CLASS.toString());
+
+		// if no capsule ver specified, find the latest one
+		if (capsuleVersion == null) {
+			final DefaultArtifact artifact = new DefaultArtifact(CAPSULE_GROUP, "capsule", null, null, "[0,)");
+			final VersionRangeRequest request = new VersionRangeRequest().setRepositories(remoteRepos).setArtifact(artifact);
+			try {
+				final VersionRangeResult result = repoSystem.resolveVersionRange(repoSession, request);
+				capsuleVersion = result.getHighestVersion() != null ? result.getHighestVersion().toString() : null;
+			} catch (VersionRangeResolutionException e) {
+				throw new MojoFailureException(e.getMessage());
+			}
+		}
 
 		getLog().info("[Capsule] Capsule Version: " + capsuleVersion.toString());
 		getLog().info("[Capsule] Output Directory: " + outputDir.toString());
@@ -116,7 +126,8 @@ public class CapsuleMojo extends AbstractMojo {
 						if (dependency.getExclusions().size() > 1) exclusionsList.append(",");
 						exclusionsList.append(exclusion.getGroupId() + ":" + exclusion.getArtifactId());
 					}
-					getLog().info("\t\t\\--" + dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion() + "(" + exclusionsList + ")");
+					getLog().info("\t\t\\--" + dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion() + "(" +
+						exclusionsList + ")");
 				}
 			}
 		}
@@ -234,7 +245,8 @@ public class CapsuleMojo extends AbstractMojo {
 	 * UTILS
 	 */
 
-	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes, final Type type) throws IOException {
+	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes,
+	                                            final Type type) throws IOException {
 		final Manifest manifestBuild = new Manifest();
 		final Attributes attributes = manifestBuild.getMainAttributes();
 		attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
@@ -318,15 +330,18 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private File resolveCapsule() throws IOException {
 		final ArtifactResult artifactResult;
-		try { artifactResult = this.resolve(CAPSULE_GROUP, "capsule", capsuleVersion); } catch (final ArtifactResolutionException e) {
+		try {
+			artifactResult = this.resolve(CAPSULE_GROUP, "capsule", capsuleVersion);
+		} catch (final ArtifactResolutionException e) {
 			throw new IOException("Capsule not found from repos");
 		}
 		return artifactResult.getArtifact().getFile();
 	}
 
 	private ArtifactResult resolve(final String groupId, final String artifactId, final String version) throws ArtifactResolutionException {
-		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(groupId + ":" + artifactId + ":" + version), remoteRepos,
-			null));
+		String coords = groupId + ":" + artifactId;
+		if (version != null && !version.isEmpty()) coords += ":" + version;
+		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(coords), remoteRepos, null));
 	}
 
 	private void createExecCopy(final File jar) throws IOException {
@@ -348,5 +363,4 @@ public class CapsuleMojo extends AbstractMojo {
 			}
 		}
 	}
-
 }
