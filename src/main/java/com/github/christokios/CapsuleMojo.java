@@ -116,21 +116,9 @@ public class CapsuleMojo extends AbstractMojo {
 		}
 
 		getLog().info("[Capsule] Dependencies: ");
-		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies()) {
-			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime")) {
-				if (dependency.getExclusions().size() == 0)
-					getLog().info("\t\t\\--" + dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion());
-				else {
-					final StringBuilder exclusionsList = new StringBuilder();
-					for (final Exclusion exclusion : dependency.getExclusions()) {
-						if (dependency.getExclusions().size() > 1) exclusionsList.append(",");
-						exclusionsList.append(exclusion.getGroupId() + ":" + exclusion.getArtifactId());
-					}
-					getLog().info("\t\t\\--" + dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion() + "(" +
-						exclusionsList + ")");
-				}
-			}
-		}
+		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies())
+			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime"))
+				getLog().info("\t\t\\--" + getDependencyCoordsWithExclusions(dependency));
 
 		try {
 			buildEmpty();
@@ -176,20 +164,10 @@ public class CapsuleMojo extends AbstractMojo {
 		// add manifest (with Dependencies list)
 		final Map<String, String> additionalAttributes = new HashMap();
 		final StringBuilder dependenciesList = new StringBuilder();
-		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies()) {
-			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime")) {
-				dependenciesList.append(dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion());
-				if (dependency.getExclusions().size() > 0) {
-					final StringBuilder exclusionsList = new StringBuilder();
-					for (final Exclusion exclusion : dependency.getExclusions()) {
-						if (dependency.getExclusions().size() > 1) exclusionsList.append(",");
-						exclusionsList.append(exclusion.getGroupId() + ":" + exclusion.getArtifactId());
-					}
-					dependenciesList.append("(" + exclusionsList.toString() + ")");
-				}
-				dependenciesList.append(" ");
-			}
-		}
+		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies())
+			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime"))
+				dependenciesList.append(getDependencyCoordsWithExclusions(dependency) + " ");
+
 		additionalAttributes.put("Dependencies", dependenciesList.toString());
 		deployManifestToJar(jarStream, additionalAttributes, Type.thin);
 
@@ -342,6 +320,20 @@ public class CapsuleMojo extends AbstractMojo {
 		String coords = groupId + ":" + artifactId;
 		if (version != null && !version.isEmpty()) coords += ":" + version;
 		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(coords), remoteRepos, null));
+	}
+
+	private String getDependencyCoordsWithExclusions(final Dependency dependency) {
+		final StringBuilder coords = new StringBuilder(dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion());
+		if (dependency.getExclusions().size() > 0) {
+			final StringBuilder exclusionsList = new StringBuilder();
+			for (int i = 0; i < dependency.getExclusions().size(); i++) {
+				final Exclusion exclusion = dependency.getExclusions().get(i);
+				if (i > 0) exclusionsList.append(",");
+				exclusionsList.append(exclusion.getGroupId() + ":" + exclusion.getArtifactId());
+			}
+			coords.append("(" + exclusionsList.toString() + ")");
+		}
+		return coords.toString();
 	}
 
 	private void createExecCopy(final File jar) throws IOException {
