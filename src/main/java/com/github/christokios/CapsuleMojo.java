@@ -69,6 +69,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private File outputDir;
 	@Parameter(property = "capsule.buildExec", defaultValue = "false")
 	private String buildExec;
+    @Parameter(property = "capsule.types")
+    private String types;
 
 	@Parameter
 	private Properties properties; // System-Properties for the app
@@ -89,6 +91,14 @@ public class CapsuleMojo extends AbstractMojo {
 		if (manifest.getProperty(Attributes.Name.MAIN_CLASS.toString()) != null)
 			mainClass = (String) manifest.getProperty(Attributes.Name.MAIN_CLASS.toString());
 
+        boolean buildEmpty = true, buildThin = true, buildFat = true;
+        if (types != null && (types.contains(Type.empty.name()) || types.contains(Type.thin.name()) || types.contains(Type.fat.name()))) {
+            buildEmpty = false; buildThin = false; buildFat = false;
+            if (types.contains(Type.empty.name())) buildEmpty = true;
+            if (types.contains(Type.thin.name())) buildThin = true;
+            if (types.contains(Type.fat.name())) buildFat = true;
+        }
+
 		// if no capsule ver specified, find the latest one
 		if (capsuleVersion == null) {
 			final DefaultArtifact artifact = new DefaultArtifact(CAPSULE_GROUP, "capsule", null, null, "[0,)");
@@ -106,6 +116,13 @@ public class CapsuleMojo extends AbstractMojo {
 		getLog().info("[Capsule] Application-Class: " + appClass);
 		getLog().info("[Capsule] Main-Class: " + mainClass);
 
+        // types
+        final StringBuilder typesString = new StringBuilder();
+        if (buildEmpty) typesString.append('[' + Type.empty.name() + ']');
+        if (buildThin) typesString.append('[' + Type.thin.name() + ']');
+        if (buildFat) typesString.append('[' + Type.fat.name() + ']');
+        getLog().info("[Capsule] Types: " + typesString.toString());
+
 		if (manifest != null) {
 			getLog().info("[Capsule] Manifest Entries: ");
 			for (final Map.Entry property : manifest.entrySet()) getLog().info("\t\t\\--" + property.getKey() + ": " + property.getValue());
@@ -121,9 +138,9 @@ public class CapsuleMojo extends AbstractMojo {
 				getLog().info("\t\t\\--" + getDependencyCoordsWithExclusions(dependency));
 
 		try {
-			buildEmpty();
-			buildThin();
-			buildFat();
+			if (buildEmpty) buildEmpty();
+			if (buildThin) buildThin();
+			if (buildFat) buildFat();
 		} catch (final IOException e) {
 			e.printStackTrace();
 			throw new MojoFailureException(e.getMessage());
@@ -217,6 +234,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.getKey());
+
 	}
 
 	/**
