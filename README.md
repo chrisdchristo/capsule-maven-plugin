@@ -1,7 +1,9 @@
 Capsule Maven Plugin
 ====================
 
-Latest version is deployed on [maven central](http://search.maven.org/#artifactdetails%7Ccom.github.christokios%7Ccapsule-maven-plugin%7C0.7.1%7Cmaven-plugin).
+Latest version 0.7.1 is deployed on [maven central](http://search.maven.org/#artifactdetails%7Ccom.github.christokios%7Ccapsule-maven-plugin%7C0.7.1%7Cmaven-plugin).
+
+v0.8.0 coming soon.
 
 This a maven plugin to build a capsule out of your jar file.
 
@@ -41,7 +43,7 @@ To build a capsule for your project, add the following to the build section of y
 				<!-- OPTIONAL (All below) -->
 				
 				<!-- <output>target/</output> -->
-				<exec>true</exec>
+				<!-- <exec>true</exec> -->
 				<!-- <types>thin fat</types> -->
 				
 				<properties> <!-- properties to pass your app at runtime -->
@@ -72,9 +74,9 @@ This will build the three types of capsules of your app. The 'fat' type, the 'th
 See more at [capsule](https://github.com/puniverse/capsule) for more about the three different types of capsules.
 
 * `<appClass>`: The class with the main method (with package declaration) of your app that the capsule should run.
-* `<output> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
-* `<exec> (Optional)`: If executable (chmod +x) versions of the capsules should be built (Applicable for Mac/Unix style systems). See [here](https://github.com/brianm/really-executable-jars-maven-plugin) and [here](http://skife.org/java/unix/2011/06/20/really_executable_jars.html) for more info. Defaults to false.
-* `<types> (Optional)`: The capsule types to build, allowed is `empty`, `thin` and `fat`, separated by a space. If empty or tag not present then all three are built.
+* `v0.8.0+ <output> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
+* `v0.8.0+ <exec> (Optional)`: If executable (chmod +x) versions of the capsules should be built (Applicable for Mac/Unix style systems). See [here](https://github.com/brianm/really-executable-jars-maven-plugin) and [here](http://skife.org/java/unix/2011/06/20/really_executable_jars.html) for more info. Defaults to false.
+* `v0.8.0+ <types> (Optional)`: The capsule types to build, allowed is `empty`, `thin` and `fat`, separated by a space. If empty or tag not present then all three are built.
 * `<properties> (Optional)`: The system properties to provide the app with.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies`, `Repositories` and `System-Properties` as these are generated automatically.
 
