@@ -4,12 +4,15 @@ import javafx.util.Pair;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Exclusion;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.IOUtil;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.DefaultArtifact;
@@ -26,7 +29,7 @@ import java.util.*;
 import java.util.jar.*;
 import java.util.zip.ZipEntry;
 
-@Mojo(name = "capsule", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
+@Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
 public class CapsuleMojo extends AbstractMojo {
 
 	public static final String LOG_PREFIX = "[Capsule]";
@@ -37,6 +40,8 @@ public class CapsuleMojo extends AbstractMojo {
 
 	public static final String EXEC_PREFIX = "#!/bin/sh\n\nexec java -jar \"$0\" \"$@\"\n\n";
 	public static final String EXEC_TRAMPOLINE_PREFIX = "#!/bin/sh\n\nexec java -Dcapsule.trampoline -jar \"$0\" \"$@\"\n\n";
+
+	public static final String EXEC_PLUGIN_KEY = "org.codehaus.mojo:exec-maven-plugin";
 
 	public static enum Type {
 		empty,
@@ -59,15 +64,12 @@ public class CapsuleMojo extends AbstractMojo {
 	@Parameter(defaultValue = "${project.build.finalName}", readonly = true)
 	private String finalName;
 
-	/**
-	 * REQUIRED VARIABLES
-	 */
-	@Parameter(property = "capsule.appClass", required = true)
-	private String appClass;
 
 	/**
 	 * OPTIONAL VARIABLES
 	 */
+	@Parameter(property = "capsule.appClass")
+	private String appClass;
 	@Parameter(property = "capsule.version")
 	private String capsuleVersion;
 	@Parameter(property = "capsule.output", defaultValue = "${project.build.directory}")
@@ -75,18 +77,22 @@ public class CapsuleMojo extends AbstractMojo {
 	@Deprecated
 	@Parameter(property = "capsule.buildExec", defaultValue = "false")
 	private String buildExec;
-	@Parameter(property = "capsule.exec", defaultValue = "false")
-	private String exec;
+	@Parameter(property = "capsule.chmod", defaultValue = "false")
+	private String chmod;
 	@Parameter(property = "capsule.trampoline", defaultValue = "false")
 	private String trampoline;
 	@Parameter(property = "capsule.types")
 	private String types;
+	@Parameter(property = "capsule.execPluginConfig")
+	private String execPluginConfig;
 	@Parameter
 	private Properties properties; // System-Properties for the app
 	@Parameter
 	private Properties manifest; // additional manifest entries
 
 	private String mainClass = DEFAULT_CAPSULE_NAME;
+
+	private Xpp3Dom execConfig = null;
 
 	/**
 	 * DEPENDENCIES
@@ -96,8 +102,35 @@ public class CapsuleMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
+
+		// check for exec plugin
+		if (execPluginConfig != null && mavenProject.getPlugin(EXEC_PLUGIN_KEY) != null) {
+			final Plugin plugin = mavenProject.getPlugin(EXEC_PLUGIN_KEY);
+			if (execPluginConfig.equals("root")) {
+				execConfig = (Xpp3Dom) plugin.getConfiguration();
+			} else {
+				final List<PluginExecution> executions = plugin.getExecutions();
+				for (final PluginExecution execution : executions) {
+					if (execution.getId().equals(execPluginConfig)) {
+						execConfig = (Xpp3Dom) execution.getConfiguration();
+						break;
+					}
+				}
+			}
+		}
+
+		// get app class from exec config (but only if app class is not set)
+		if (appClass == null && execConfig != null) {
+			final Xpp3Dom mainClassElement = execConfig.getChild("mainClass");
+			if (mainClassElement != null) appClass = mainClassElement.getValue();
+		}
+
+		// fail if no app class
+		if (appClass == null)
+			throw new MojoFailureException(LOG_PREFIX + " appClass not set (or could not be obtained from the exec plugin mainClass)");
+
 		// check for custom capsule main class
-		if (manifest.getProperty(Attributes.Name.MAIN_CLASS.toString()) != null)
+		if (manifest != null && manifest.getProperty(Attributes.Name.MAIN_CLASS.toString()) != null)
 			mainClass = (String) manifest.getProperty(Attributes.Name.MAIN_CLASS.toString());
 
 		// check build types
@@ -110,6 +143,13 @@ public class CapsuleMojo extends AbstractMojo {
 			if (types.contains(Type.thin.name())) buildThin = true;
 			if (types.contains(Type.fat.name())) buildFat = true;
 		}
+
+		// print types
+		final StringBuilder typesString = new StringBuilder();
+		if (buildEmpty) typesString.append('[' + Type.empty.name() + ']');
+		if (buildThin) typesString.append('[' + Type.thin.name() + ']');
+		if (buildFat) typesString.append('[' + Type.fat.name() + ']');
+		getLog().debug(LOG_PREFIX + " Types: " + typesString.toString());
 
 		// if no capsule ver specified, find the latest one
 		if (capsuleVersion == null) {
@@ -125,30 +165,6 @@ public class CapsuleMojo extends AbstractMojo {
 
 		getLog().debug(LOG_PREFIX + " Capsule Version: " + capsuleVersion.toString());
 		getLog().debug(LOG_PREFIX + " Output Directory: " + output.toString());
-		getLog().debug(LOG_PREFIX + " Application-Class: " + appClass);
-		getLog().debug(LOG_PREFIX + " Main-Class: " + mainClass);
-		getLog().debug(LOG_PREFIX + " Repositories: " + getRepoString());
-
-		// types
-		final StringBuilder typesString = new StringBuilder();
-		if (buildEmpty) typesString.append('[' + Type.empty.name() + ']');
-		if (buildThin) typesString.append('[' + Type.thin.name() + ']');
-		if (buildFat) typesString.append('[' + Type.fat.name() + ']');
-		getLog().debug(LOG_PREFIX + " Types: " + typesString.toString());
-
-		if (manifest != null) {
-			getLog().debug(LOG_PREFIX + " Manifest Entries: ");
-			for (final Map.Entry property : manifest.entrySet()) getLog().debug("\t\t\\--" + property.getKey() + ": " + property.getValue());
-		}
-		if (properties != null) {
-			getLog().debug(LOG_PREFIX + " System Properties: ");
-			for (final Map.Entry property : properties.entrySet()) getLog().debug("\t\t\\--" + property.getKey() + "=" + property.getValue());
-		}
-
-		getLog().debug(LOG_PREFIX + " Dependencies: ");
-		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies())
-			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime"))
-				getLog().debug("\t\t\\--" + getDependencyCoordsWithExclusions(dependency));
 
 		try {
 			if (buildEmpty) buildEmpty();
@@ -259,11 +275,25 @@ public class CapsuleMojo extends AbstractMojo {
 		attributes.put(new Attributes.Name("Application-Class"), this.appClass);
 		attributes.put(new Attributes.Name("Application-Name"), this.finalName + "-capsule-" + type);
 
-		if (this.properties != null) {
-			final StringBuilder propertiesList = new StringBuilder();
-			for (final Map.Entry<Object, Object> property : this.properties.entrySet())
-				propertiesList.append(property.getKey() + "=" + property.getValue() + " ");
-			attributes.put(new Attributes.Name("System-Properties"), propertiesList.toString());
+		// add properties
+		final String propertiesString = getSystemPropertiesString();
+		if (propertiesString != null) attributes.put(new Attributes.Name("System-Properties"), propertiesString);
+
+		// get arguments from exec plugin (if exist)
+		if (execConfig != null) {
+			final Xpp3Dom argsElement = execConfig.getChild("arguments");
+			if (argsElement != null) {
+				final Xpp3Dom[] argsElements = argsElement.getChildren();
+				getLog().debug("argsElementsSize: " + argsElements.length);
+				if (argsElements != null && argsElements.length > 0) {
+					final StringBuilder argsList = new StringBuilder();
+					for (final Xpp3Dom arg : argsElements) {
+						if (arg != null && arg.getValue() != null)
+							argsList.append(arg.getValue().replace(" ", "") + " ");
+					}
+					attributes.put(new Attributes.Name("JVM-Args"), argsList.toString());
+				}
+			}
 		}
 
 		// additional attributes
@@ -381,6 +411,31 @@ public class CapsuleMojo extends AbstractMojo {
 		return dependenciesList.toString();
 	}
 
+	private String getSystemPropertiesString() {
+		StringBuilder propertiesList = null;
+		if (this.properties != null) {
+			propertiesList = new StringBuilder();
+			for (final Map.Entry<Object, Object> property : this.properties.entrySet())
+				if (property.getKey() != null && property.getValue() != null)
+					propertiesList.append(property.getKey() + "=" + property.getValue() + " ");
+		} else if (execConfig != null) { // else try and find properties in the exec plugin
+			propertiesList = new StringBuilder();
+			final Xpp3Dom propertiesElement = execConfig.getChild("systemProperties");
+			if (propertiesElement != null) {
+				final Xpp3Dom[] propertiesElements = propertiesElement.getChildren();
+				if (propertiesElements != null && propertiesElements.length > 0) {
+					for (final Xpp3Dom propertyElement : propertiesElements) {
+						final Xpp3Dom key = propertyElement.getChild("key");
+						final Xpp3Dom value = propertyElement.getChild("value");
+						if (key != null && key.getValue() != null && value != null && value.getValue() != null)
+							propertiesList.append(key.getValue() + "=" + value.getValue() + " ");
+					}
+				}
+			}
+		}
+		return propertiesList == null ? null : propertiesList.toString();
+	}
+
 	private void printManifest(final Manifest manifest) {
 		getLog().debug(LOG_PREFIX + " Manifest:");
 		for (final Map.Entry<Object, Object> entry : manifest.getMainAttributes().entrySet()) {
@@ -389,7 +444,7 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private void createExecCopy(final File jar) throws IOException {
-		if (this.exec.equals("true") || this.exec.equals("1") || this.buildExec.equals("true") || this.buildExec.equals("1"))
+		if (this.chmod.equals("true") || this.chmod.equals("1") || this.buildExec.equals("true") || this.buildExec.equals("1"))
 			createExecCopyProcess(jar, EXEC_PREFIX, ".x");
 		if (this.trampoline.equals("true") || this.trampoline.equals("1"))
 			createExecCopyProcess(jar, EXEC_TRAMPOLINE_PREFIX, ".tx");
@@ -412,4 +467,5 @@ public class CapsuleMojo extends AbstractMojo {
 			getLog().info(LOG_PREFIX + " Created " + x.getName());
 		}
 	}
+
 }

@@ -14,7 +14,7 @@ A pro? [Skip to the plugin reference](https://github.com/christokios/capsule-mav
 Required java version 1.7+
 
 #### Building from source
-Clone the project and run a `maven clean install`:
+Clone the project and run a maven install:
 
 ```
 git clone https://github.com/christokios/capsule-maven-plugin.git
@@ -33,11 +33,34 @@ In the simplest form, you can add the following snippet in your `pom.xml`:
 	<groupId>com.github.christokios</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
+	<configuration>
+		<appClass>hello.HelloWorld</appClass>
+	</configuration>
+</plugin>
+```
+
+And then run:
+
+```
+mvn capsule:build
+```
+
+The only requirement is to have the `<appClass>` attribute in the configuration. This is the class of your app that contains the main method which will be fired on startup. You must include the package path along with the class name (`hello` is the package and `HelloWorld` is the class name above).
+
+## Package Phase Building
+
+It is recommended to have an execution setup to build the capsules during the package phase, thus eliminating you to run an additional maven command to build them.
+
+```
+<plugin>
+	<groupId>com.github.christokios</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
 	<executions>
 		<execution>
 			<phase>package</phase>
 			<goals>
-				<goal>capsule</goal>
+				<goal>build</goal>
 			</goals>
 			<configuration>
 				<appClass>hello.HelloWorld</appClass>
@@ -46,8 +69,6 @@ In the simplest form, you can add the following snippet in your `pom.xml`:
 	</executions>
 </plugin>
 ```
-
-The only requirement is to have the `<appClass>` attribute in the configuration. This is the class of your app that contains the main method which will be fired on startup. You must include the package path along with the class name (`hello` is the package and `HelloWorld` is the class name above).
 
 ## Capsule Types
 
@@ -82,12 +103,12 @@ It is possible to `chmod+x` a jar so it can be run without needing to prefix the
 
 The plugin can build really executable jars for you automatically!
 
-Add the `<exec>true</exec>` to your configuration (default is false).
+Add the `<chmod>true</chmod>` to your configuration (default is false).
 
 ```
 <configuration>
 	<appClass>hello.HelloWorld</appClass>
-	<exec>true</exec>
+	<chmod>true</chmod>
 </configuration>
 ```
 
@@ -185,10 +206,10 @@ So for e.g if you would like to set the `JVM-Args`:
 <configuration>
 	<appClass>hello.HelloWorld</appClass>
 	<manifest>
-		<property>
+		<entry>
 			<name>JVM-Args</name>
 			<value>-Xmx512m</value>
-		</property>
+		</entry>
 	</manifest>
 </configuration>
 ```
@@ -215,25 +236,143 @@ Capsule supports defining your own Capsule class by extending the `Capsule.class
 <configuration>
 	<appClass>hello.HelloWorld</appClass>
 	<manifest>
-		<property>
+		<entry>
 			<name>Main-Class</name>
 			<value>MyCapsule</value>
-		</property>
+		</entry>
 	</manifest>
 </configuration>
 ```
 
 See more info on [custom capsules](https://github.com/puniverse/capsule#custom-capsules).
 
+## Maven Exec Plugin Integration
+
+The [maven exec plugin](http://mojo.codehaus.org/exec-maven-plugin/) is a useful tool to run your jar all from within maven (using its classpath).
+
+```
+<plugin>
+	<groupId>org.codehaus.mojo</groupId>
+	<artifactId>exec-maven-plugin</artifactId>
+	<version>${maven.exec.plugin.version}</version>
+	<configuration>
+		<mainClass>hello.HelloWorld</mainClass>
+	</configuration>
+</plugin>
+```
+
+You can then run your normal jar by:
+
+```
+mvn package exec:java
+```
+
+Notice that the exec plugin provides a configuration where you can specify the `<mainClass>` as well as other fiels such as `<systemProperties>`. The Capsule plugin provides the ability to pull this config and apply it to the built capsules, thus saving you from having to enter it twice (once at the exec plugin and second at the capsule plugin).
+
+In the capsule plugin you can set the `<execPluginConfig>` tag to do this:
+
+```
+<plugin>
+	<groupId>com.github.christokios</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
+	<configuration>
+		<execPluginConfig>root</execPluginConfig>
+	</configuration>
+</plugin>
+```
+
+The value `root` will tell the capsule plugin to pull the config from the `<configuration>` element at the root of the exec plugin.
+
+If you are using executions within the exec plugin like so:
+
+```
+<plugin>
+	<groupId>org.codehaus.mojo</groupId>
+	<artifactId>exec-maven-plugin</artifactId>
+	<version>${maven.exec.plugin.version}</version>
+	<executions>
+		<execution>
+			<id>default-cli</id>
+			<goals>
+				<goal>java</goal>
+			</goals>
+			<configuration>
+				<mainClass>hello.HelloWorld</mainClass>
+			</configuration>
+		</execution>
+	</executions>
+</plugin>
+```
+
+Then you can specify the `<execPluginConfig>` to the ID of the execution:
+
+```
+<plugin>
+	<groupId>com.github.christokios</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
+	<configuration>
+		<execPluginConfig>default-cli</execPluginConfig>
+	</configuration>
+</plugin>
+```
+
+##### How the capsule plugin maps the config from the exec plugin
+
+The capsule plugin will map values from the exec plugin:
+
+```
+mainClass -> appClass
+systemProperties -> properties
+arguments -> JVM-Args (manifest entry)
+```
+
+So the `<mainClass>` element in the exec's `<configuration>` will be the `<appClass>` in the capsules's `<configuration>`.
+
+##### A complete solution
+
+So essentially you can setup as follows:
+
+```
+<plugin>
+	<groupId>org.codehaus.mojo</groupId>
+	<artifactId>exec-maven-plugin</artifactId>
+	<version>${maven.exec.plugin.version}</version>
+	<configuration>
+		<mainClass>hello.HelloWorld</mainClass>
+		<systemProperties>
+			<property>
+				<key>propertyName1</key>
+				<value>propertyValue1</value>
+			</property>
+		</systemProperties>
+	</configuration>
+</plugin>
+<plugin>
+	<groupId>com.github.christokios</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
+	<configuration>
+		<execPluginConfig>root</execPluginConfig>
+	</configuration>
+</plugin>
+```
+
+##### Overriding the exec plugin config
+
+Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in the `<manifest>`) of the capsule plugin, then these will override the config of the exec plugin.
+
 ## Reference
 
-* `<appClass>`: The class with the main method (with package declaration) of your app that the capsule should run.
+* `<appClass>`: The class with the main method (with package declaration) of your app that the capsule should run. This can be optional too, if you are using the maven exec plugin and have specified a `execPluginConfig`.
 * `<types> (Optional)`: The capsule types to build, allowed is `empty`, `thin` and `fat`, separated by a space. If empty or tag not present then all three are built.
-* `<exec> (Optional)`: If executable (chmod +x) versions of the capsules should be built in the form of '.x' files (Applicable for Mac/Unix style systems). See [here](https://github.com/brianm/really-executable-jars-maven-plugin) and [here](http://skife.org/java/unix/2011/06/20/really_executable_jars.html) for more info. Defaults to false.
+* `<chmod> (Optional)`: If executable (chmod +x) versions of the capsules should be built in the form of '.x' files (Applicable for Mac/Unix style systems). See [here](https://github.com/brianm/really-executable-jars-maven-plugin) and [here](http://skife.org/java/unix/2011/06/20/really_executable_jars.html) for more info. Defaults to false.
 * `<trampoline> (Optional)`: This will create trampoline style executable capsules in the form of '.tx' files. See more info [here](https://github.com/christokios/capsule-maven-plugin#trampoline).
 * `<output> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
+* `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
-* `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies`, `Repositories` and `System-Properties` as these are generated automatically.
+* `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule#reference) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies`, `Repositories` and `System-Properties` as these are generated automatically.
 
 ```
 <!-- BUILD CAPSULES -->
@@ -245,19 +384,17 @@ See more info on [custom capsules](https://github.com/puniverse/capsule#custom-c
 		<execution>
 			<phase>package</phase>
 			<goals>
-				<goal>capsule</goal>
+				<goal>build</goal>
 			</goals>
 			<configuration>
 
-				<!-- REQUIRED -->
 				<appClass>hello.HelloWorld</appClass>
 
-				<!-- OPTIONAL (All below) -->
-
 				<!-- <output>target/</output> -->
-				<!-- <exec>true</exec> -->
+				<!-- <chmod>true</chmod> -->
 				<!-- <trampoline>true</trampoline> -->
 				<!-- <types>thin fat</types> -->
+				<!-- <execPluginConfig>root</execPluginConfig> -->
 
 				<properties>
 					<property>
@@ -267,14 +404,14 @@ See more info on [custom capsules](https://github.com/puniverse/capsule#custom-c
 				</properties>
 
 				<manifest>
-					<property>
+					<entry>
 						<name>JVM-Args</name>
 						<value>-Xmx512m</value>
-					</property>
-					<property>
+					</entry>
+					<entry>
 						<name>Min-Java-Version</name>
 						<value>1.8.0</value>
-					</property>
+					</entry>
 				</manifest>
 
 			</configuration>
