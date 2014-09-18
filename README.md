@@ -1,15 +1,15 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-0.8.0-blue.svg?style=flat)](https://github.com/christokios/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-0.8.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.christokios/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-0.8.0-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-0.8.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
 
-See more at [capsule](https://github.com/puniverse/capsule) and the [demo using the plugin](https://github.com/christokios/capsule-maven-plugin-demo).
+See more at [capsule](https://github.com/puniverse/capsule) and the [demo using the plugin](https://github.com/chrischristo/capsule-maven-plugin-demo).
 
-A pro? [Skip to the plugin reference](https://github.com/christokios/capsule-maven-plugin#reference).
+A pro? [Skip to the plugin reference](https://github.com/chrischristo/capsule-maven-plugin#reference).
 
 Required java version 1.7+
 
@@ -17,12 +17,12 @@ Required java version 1.7+
 Clone the project and run a maven install:
 
 ```
-git clone https://github.com/christokios/capsule-maven-plugin.git
+git clone https://github.com/chrischristo/capsule-maven-plugin.git
 cd capsule-maven-plugin
 mvn install
 ```
 
-Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/com.github.christokios/capsule-maven-plugin).
+Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin).
 
 ## Quick Start
 
@@ -30,7 +30,7 @@ In the simplest form, you can add the following snippet in your `pom.xml`:
 
 ```
 <plugin>
-	<groupId>com.github.christokios</groupId>
+	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -53,7 +53,7 @@ It is recommended to have an execution setup to build the capsules during the pa
 
 ```
 <plugin>
-	<groupId>com.github.christokios</groupId>
+	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<executions>
@@ -273,7 +273,7 @@ In the capsule plugin you can set the `<execPluginConfig>` tag to do this:
 
 ```
 <plugin>
-	<groupId>com.github.christokios</groupId>
+	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -309,7 +309,7 @@ Then you can specify the `<execPluginConfig>` to the ID of the execution:
 
 ```
 <plugin>
-	<groupId>com.github.christokios</groupId>
+	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -350,7 +350,7 @@ So essentially you can setup as follows:
 	</configuration>
 </plugin>
 <plugin>
-	<groupId>com.github.christokios</groupId>
+	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -368,7 +368,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<appClass>`: The class with the main method (with package declaration) of your app that the capsule should run. This can be optional too, if you are using the maven exec plugin and have specified a `execPluginConfig`.
 * `<types> (Optional)`: The capsule types to build, allowed is `empty`, `thin` and `fat`, separated by a space. If empty or tag not present then all three are built.
 * `<chmod> (Optional)`: If executable (chmod +x) versions of the capsules should be built in the form of '.x' files (Applicable for Mac/Unix style systems). See [here](https://github.com/brianm/really-executable-jars-maven-plugin) and [here](http://skife.org/java/unix/2011/06/20/really_executable_jars.html) for more info. Defaults to false.
-* `<trampoline> (Optional)`: This will create trampoline style executable capsules in the form of '.tx' files. See more info [here](https://github.com/christokios/capsule-maven-plugin#trampoline).
+* `<trampoline> (Optional)`: This will create trampoline style executable capsules in the form of '.tx' files. See more info [here](https://github.com/chrischristo/capsule-maven-plugin#trampoline).
 * `<output> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
@@ -377,7 +377,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 ```
 <!-- BUILD CAPSULES -->
 <plugin>
-	<groupId>com.github.christokios</groupId>
+	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<executions>
