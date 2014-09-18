@@ -144,7 +144,7 @@ If you would like to build 'trampoline' executable capsules you can add the `<tr
 ```
 <configuration>
 	<appClass>hello.HelloWorld</appClass>
-	<trampolinetrue</trampoline>
+	<trampoline>true</trampoline>
 </configuration>
 ```
 
@@ -178,7 +178,7 @@ Simply add the `<properties>` tag in the plugin's configuration and declare any 
 	<appClass>hello.HelloWorld</appClass>
 	<properties>
 		<property>
-			<name>boo</name>
+			<key>boo</key>
 			<value>ya</value>
 		</property>
 	</properties>
@@ -207,7 +207,7 @@ So for e.g if you would like to set the `JVM-Args`:
 	<appClass>hello.HelloWorld</appClass>
 	<manifest>
 		<entry>
-			<name>JVM-Args</name>
+			<key>JVM-Args</key>
 			<value>-Xmx512m</value>
 		</entry>
 	</manifest>
@@ -237,7 +237,7 @@ Capsule supports defining your own Capsule class by extending the `Capsule.class
 	<appClass>hello.HelloWorld</appClass>
 	<manifest>
 		<entry>
-			<name>Main-Class</name>
+			<key>Main-Class</key>
 			<value>MyCapsule</value>
 		</entry>
 	</manifest>
@@ -398,18 +398,18 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 
 				<properties>
 					<property>
-						<name>propertyName1</name>
+						<key>propertyName1</key>
 						<value>propertyValue1</value>
 					</property>
 				</properties>
 
 				<manifest>
 					<entry>
-						<name>JVM-Args</name>
+						<key>JVM-Args</key>
 						<value>-Xmx512m</value>
 					</entry>
 					<entry>
-						<name>Min-Java-Version</name>
+						<key>Min-Java-Version</key>
 						<value>1.8.0</value>
 					</entry>
 				</manifest>
