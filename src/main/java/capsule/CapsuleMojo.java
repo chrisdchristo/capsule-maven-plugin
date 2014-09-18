@@ -24,7 +24,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.jar.*;
 import java.util.zip.ZipEntry;
 
@@ -84,9 +87,9 @@ public class CapsuleMojo extends AbstractMojo {
 	@Parameter(property = "capsule.execPluginConfig")
 	private String execPluginConfig;
 	@Parameter
-	private Properties properties; // System-Properties for the app
+	private Pair<String,String>[] properties; // System-Properties for the app
 	@Parameter
-	private Properties manifest; // additional manifest entries
+	private Pair<String,String>[] manifest; // additional manifest entries
 
 	private String mainClass = DEFAULT_CAPSULE_NAME;
 
@@ -128,8 +131,8 @@ public class CapsuleMojo extends AbstractMojo {
 			throw new MojoFailureException(LOG_PREFIX + " appClass not set (or could not be obtained from the exec plugin mainClass)");
 
 		// check for custom capsule main class
-		if (manifest != null && manifest.getProperty(Attributes.Name.MAIN_CLASS.toString()) != null)
-			mainClass = (String) manifest.getProperty(Attributes.Name.MAIN_CLASS.toString());
+		if (manifest != null && pull(manifest, Attributes.Name.MAIN_CLASS.toString()) != null)
+			mainClass = (String) pull(manifest, Attributes.Name.MAIN_CLASS.toString()).value;
 
 		// check build types
 		boolean buildEmpty = true, buildThin = true, buildFat = true;
@@ -179,7 +182,7 @@ public class CapsuleMojo extends AbstractMojo {
 	 */
 	public final void buildEmpty() throws IOException {
 		final Pair<File, JarOutputStream> jar = openJar(Type.empty);
-		final JarOutputStream jarStream = jar.getValue();
+		final JarOutputStream jarStream = jar.value;
 
 		// add manifest (plus Application+Repositories)
 		final Map<String, String> additionalAttributes = new HashMap();
@@ -196,7 +199,7 @@ public class CapsuleMojo extends AbstractMojo {
 		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
 
 		IOUtil.close(jarStream);
-		this.createExecCopy(jar.getKey());
+		this.createExecCopy(jar.key);
 	}
 
 	/**
@@ -204,7 +207,7 @@ public class CapsuleMojo extends AbstractMojo {
 	 */
 	public final void buildThin() throws IOException {
 		final Pair<File, JarOutputStream> jar = openJar(Type.thin);
-		final JarOutputStream jarStream = jar.getValue();
+		final JarOutputStream jarStream = jar.value;
 
 		// add manifest (with Dependencies+Repositories list)
 		final Map<String, String> additionalAttributes = new HashMap();
@@ -229,7 +232,7 @@ public class CapsuleMojo extends AbstractMojo {
 			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
 		IOUtil.close(jarStream);
-		this.createExecCopy(jar.getKey());
+		this.createExecCopy(jar.key);
 	}
 
 	/**
@@ -237,7 +240,7 @@ public class CapsuleMojo extends AbstractMojo {
 	 */
 	public final void buildFat() throws IOException {
 		final Pair<File, JarOutputStream> jar = openJar(Type.fat);
-		final JarOutputStream jarStream = jar.getValue();
+		final JarOutputStream jarStream = jar.value;
 
 		// add manifest
 		deployManifestToJar(jarStream, null, Type.fat);
@@ -257,15 +260,14 @@ public class CapsuleMojo extends AbstractMojo {
 		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
 
 		IOUtil.close(jarStream);
-		this.createExecCopy(jar.getKey());
+		this.createExecCopy(jar.key);
 	}
 
 	/**
 	 * UTILS
 	 */
 
-	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes,
-	                                            final Type type) throws IOException {
+	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes, final Type type) throws IOException {
 		final Manifest manifestBuild = new Manifest();
 		final Attributes attributes = manifestBuild.getMainAttributes();
 		attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
@@ -301,8 +303,8 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// custom user defined manifest entries (will override any before)
 		if (this.manifest != null)
-			for (final Map.Entry<Object, Object> property : this.manifest.entrySet())
-				attributes.put(new Attributes.Name(property.getKey().toString()), property.getValue());
+			for (final Pair<String,String> entry : this.manifest)
+				attributes.put(new Attributes.Name(entry.key), entry.value);
 
 		// write to jar
 		final ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
@@ -413,9 +415,9 @@ public class CapsuleMojo extends AbstractMojo {
 		StringBuilder propertiesList = null;
 		if (this.properties != null) {
 			propertiesList = new StringBuilder();
-			for (final Map.Entry<Object, Object> property : this.properties.entrySet())
-				if (property.getKey() != null && property.getValue() != null)
-					propertiesList.append(property.getKey() + "=" + property.getValue() + " ");
+			for (final Pair property : this.properties)
+				if (property.key != null && property.value != null)
+					propertiesList.append(property.key + "=" + property.value + " ");
 		} else if (execConfig != null) { // else try and find properties in the exec plugin
 			propertiesList = new StringBuilder();
 			final Xpp3Dom propertiesElement = execConfig.getChild("systemProperties");
@@ -467,13 +469,13 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	public static class Pair<K, V>  {
-		private K key;
+		public K key;
 		public V value;
-		public Pair(final K key, final V value) {
-			this.key = key;
-			this.value = value;
-		}
-		public final K getKey() { return this.key; }
-		public final V getValue() { return this.value; }
+		public Pair() {}
+		public Pair(final K key, final V value) { this.key = key; this.value = value; }
+	}
+	private static final Pair pull(final Pair[] pairs, final Object key) {
+		for (final Pair pair : pairs) if (pair.key.equals(key)) return pair;
+		return null;
 	}
 }
