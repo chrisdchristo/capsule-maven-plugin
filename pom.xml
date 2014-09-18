@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.github.christokios</groupId>
+	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>0.8.1-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
@@ -20,14 +20,14 @@
 	</developers>
 
 	<scm>
-		<url>https://github.com/christokios/capsule-maven-plugin</url>
-		<connection>scm:git:https://github.com/christokios/capsule-maven-plugin.git</connection>
-		<developerConnection>scm:git:https://github.com/christokios/capsule-maven-plugin.git</developerConnection>
+		<url>https://github.com/chrischristo/capsule-maven-plugin</url>
+		<connection>scm:git:https://github.com/chrischristo/capsule-maven-plugin.git</connection>
+		<developerConnection>scm:git:https://github.com/chrischristo/capsule-maven-plugin.git</developerConnection>
 	</scm>
 
 	<name>Capsule Maven Plugin</name>
 	<description>The maven plugin to build capsules of your jars.</description>
-	<url>https://github.com/christokios/capsule-maven-plugin</url>
+	<url>https://github.com/chrischristo/capsule-maven-plugin</url>
 
 	<licenses>
 		<license>

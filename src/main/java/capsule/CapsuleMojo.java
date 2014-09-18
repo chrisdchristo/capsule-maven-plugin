@@ -1,6 +1,5 @@
-package com.github.christokios;
+package capsule;
 
-import javafx.util.Pair;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Exclusion;
@@ -63,7 +62,6 @@ public class CapsuleMojo extends AbstractMojo {
 	private List<RemoteRepository> remoteRepos;
 	@Parameter(defaultValue = "${project.build.finalName}", readonly = true)
 	private String finalName;
-
 
 	/**
 	 * OPTIONAL VARIABLES
@@ -468,4 +466,14 @@ public class CapsuleMojo extends AbstractMojo {
 		}
 	}
 
+	public static class Pair<K, V>  {
+		private K key;
+		public V value;
+		public Pair(final K key, final V value) {
+			this.key = key;
+			this.value = value;
+		}
+		public final K getKey() { return this.key; }
+		public final V getValue() { return this.value; }
+	}
 }

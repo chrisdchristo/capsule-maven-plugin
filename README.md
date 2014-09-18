@@ -267,7 +267,7 @@ You can then run your normal jar by:
 mvn package exec:java
 ```
 
-Notice that the exec plugin provides a configuration where you can specify the `<mainClass>` as well as other fiels such as `<systemProperties>`. The Capsule plugin provides the ability to pull this config and apply it to the built capsules, thus saving you from having to enter it twice (once at the exec plugin and second at the capsule plugin).
+Notice that the exec plugin provides a configuration where you can specify the `<mainClass>` as well as other fields such as `<systemProperties>`. The Capsule plugin provides the ability to pull this config and apply it to the built capsules, thus saving you from having to enter it twice (once at the exec plugin and second at the capsule plugin).
 
 In the capsule plugin you can set the `<execPluginConfig>` tag to do this:
 
