@@ -11,7 +11,7 @@ See more at [capsule](https://github.com/puniverse/capsule) and the [demo using 
 
 A pro? [Skip to the plugin reference](https://github.com/chrischristo/capsule-maven-plugin#reference).
 
-Required java version 1.7+
+Requires java version 1.7+ and maven 3.1.x+
 
 #### Building from source
 Clone the project and run a maven install:
