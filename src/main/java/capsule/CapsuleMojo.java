@@ -24,10 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.*;
 import java.util.zip.ZipEntry;
 
@@ -65,6 +62,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private List<RemoteRepository> remoteRepos;
 	@Parameter(defaultValue = "${project.build.finalName}", readonly = true)
 	private String finalName;
+	@Parameter(defaultValue = "${project.build.directory}")
+	private File buildDir;
 
 	/**
 	 * OPTIONAL VARIABLES
@@ -164,6 +163,19 @@ public class CapsuleMojo extends AbstractMojo {
 			}
 		}
 
+		// double check output is not in some undesired locations
+		final List<String> illegalOutputPaths = Arrays.asList(
+			this.buildDir.getPath() + File.separatorChar + "classes",
+			this.buildDir.getPath() + File.separatorChar + "classes/"
+		);
+		if (illegalOutputPaths.contains(this.output.getPath())) {
+			this.output = this.buildDir;
+			getLog().debug(LOG_PREFIX + " Output was an illegal path, resorting to default build directory.");
+		}
+
+		// build path if doesn't exist
+		if (!output.exists()) output.mkdirs();
+
 		getLog().debug(LOG_PREFIX + " Capsule Version: " + capsuleVersion.toString());
 		getLog().debug(LOG_PREFIX + " Output Directory: " + output.toString());
 
@@ -216,7 +228,7 @@ public class CapsuleMojo extends AbstractMojo {
 		deployManifestToJar(jarStream, additionalAttributes, Type.thin);
 
 		// add compiled project classes
-		final File classesDir = new File(output, "classes");
+		final File classesDir = new File(this.buildDir, "classes");
 		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
 			@Override
 			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
@@ -246,7 +258,7 @@ public class CapsuleMojo extends AbstractMojo {
 		deployManifestToJar(jarStream, null, Type.fat);
 
 		// add main jar
-		final File mainJarFile = new File(output, finalName + ".jar");
+		final File mainJarFile = new File(this.buildDir, this.finalName + ".jar");
 		addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jarStream);
 
 		// add dependencies
@@ -318,7 +330,7 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private void addCustomCapsuleClass(final JarOutputStream jarStream) throws IOException {
-		final File classesDir = new File(output, "classes");
+		final File classesDir = new File(this.buildDir, "classes");
 		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
 			@Override
 			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
@@ -361,7 +373,7 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private Pair<File, JarOutputStream> openJar(final Type type) throws IOException {
-		final File file = new File(output, finalName + "-capsule-" + type.toString() + ".jar");
+		final File file = new File(this.output, this.finalName + "-capsule-" + type.toString() + ".jar");
 		getLog().info(LOG_PREFIX + " Created " + file.getName());
 		return new Pair(file, new JarOutputStream(new FileOutputStream(file)));
 	}
