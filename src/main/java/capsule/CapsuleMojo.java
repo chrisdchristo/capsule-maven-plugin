@@ -27,6 +27,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.jar.*;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
 
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
 public class CapsuleMojo extends AbstractMojo {
@@ -228,15 +229,7 @@ public class CapsuleMojo extends AbstractMojo {
 		deployManifestToJar(jarStream, additionalAttributes, Type.thin);
 
 		// add compiled project classes
-		final File classesDir = new File(this.buildDir, "classes");
-		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
-			@Override
-			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
-				if (!attrs.isDirectory())
-					addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(path.toFile()), jarStream);
-				return FileVisitResult.CONTINUE;
-			}
-		});
+		this.addCompiledProjectClasses(jarStream);
 
 		// add Capsule classes
 		final Map<String, byte[]> capsuleClasses = getAllCapsuleClasses();
@@ -258,12 +251,22 @@ public class CapsuleMojo extends AbstractMojo {
 		deployManifestToJar(jarStream, null, Type.fat);
 
 		// add main jar
-		final File mainJarFile = new File(this.buildDir, this.finalName + ".jar");
-		addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jarStream);
+		try {
+			final File mainJarFile = new File(this.buildDir, this.finalName + ".jar");
+			addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jarStream);
+		} catch (final FileNotFoundException e) { // if project jar wasn't built (perhaps the mvn package wasn't run, and only the mvn compile was run)
+			// add compiled project classes instead
+			this.addCompiledProjectClasses(jarStream);
+		}
 
 		// add dependencies
-		for (final Artifact artifact : artifacts)
-			addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
+		for (final Artifact artifact : artifacts) {
+			if (artifact.getFile() == null) {
+				getLog().warn(LOG_PREFIX + " Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
+			} else {
+				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
+			}
+		}
 
 		// add Capsule.class
 		this.addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
@@ -329,6 +332,18 @@ public class CapsuleMojo extends AbstractMojo {
 		return addToJar(JarFile.MANIFEST_NAME, manifestInputStream, jar);
 	}
 
+	private void addCompiledProjectClasses(final JarOutputStream jarStream) throws IOException {
+		final File classesDir = new File(this.buildDir, "classes");
+		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
+				if (!attrs.isDirectory())
+					addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(path.toFile()), jarStream);
+				return FileVisitResult.CONTINUE;
+			}
+		});
+	}
+
 	private void addCustomCapsuleClass(final JarOutputStream jarStream) throws IOException {
 		final File classesDir = new File(this.buildDir, "classes");
 		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
@@ -366,9 +381,11 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
-		jar.putNextEntry(new ZipEntry(name));
-		IOUtil.copy(input, jar);
-		jar.closeEntry();
+		try {
+			jar.putNextEntry(new ZipEntry(name));
+			IOUtil.copy(input, jar);
+			jar.closeEntry();
+		} catch (final ZipException ignore) {} // ignore duplicate entries and other errors
 		IOUtil.close(input);
 		return jar;
 	}
