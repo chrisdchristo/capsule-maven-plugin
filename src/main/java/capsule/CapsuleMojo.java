@@ -369,6 +369,7 @@ public class CapsuleMojo extends AbstractMojo {
 		jar.putNextEntry(new ZipEntry(name));
 		IOUtil.copy(input, jar);
 		jar.closeEntry();
+		IOUtil.close(input);
 		return jar;
 	}
 
