@@ -69,6 +69,8 @@ public class CapsuleMojo extends AbstractMojo {
 	/**
 	 * OPTIONAL VARIABLES
 	 */
+  @Parameter
+  private FileSet[] fileSets;
 	@Parameter(property = "capsule.appClass")
 	private String appClass;
 	@Parameter(property = "capsule.version")
@@ -236,6 +238,8 @@ public class CapsuleMojo extends AbstractMojo {
 		for (final Map.Entry<String, byte[]> entry : capsuleClasses.entrySet())
 			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
+    addFileSetsToJar(jarStream);
+
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
 	}
@@ -273,6 +277,8 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// add custom capsule class (if exists)
 		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
+
+    addFileSetsToJar(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
@@ -379,6 +385,33 @@ public class CapsuleMojo extends AbstractMojo {
 
 		return otherClasses;
 	}
+
+  private void addFileSetsToJar(final JarOutputStream jar) throws IOException {
+    if (fileSets == null) return;
+
+    for (FileSet fileSet : fileSets) {
+      if (fileSet.directory != null && !fileSet.directory.isEmpty()) {
+        File directory = new File(fileSet.directory);
+
+        if (!directory.isDirectory()) {
+          throw new IOException("Attempt to include file from non-directory: " + directory.getAbsolutePath());
+        }
+
+        if (fileSet.outputDirectory != null && !fileSet.outputDirectory.isEmpty()) {
+          if (!fileSet.outputDirectory.endsWith("/")) fileSet.outputDirectory += "/";
+          jar.putNextEntry(new ZipEntry(fileSet.outputDirectory));
+          jar.closeEntry();
+        } else {
+          fileSet.outputDirectory = "";
+        }
+
+        for (String include : fileSet.includes) {
+          FileInputStream fin = new FileInputStream(new File(directory, include));
+          addToJar(fileSet.outputDirectory + "/" + include, fin, jar);
+        }
+      }
+    }
+  }
 
 	private JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
 		try {
@@ -497,6 +530,12 @@ public class CapsuleMojo extends AbstractMojo {
 			getLog().info(LOG_PREFIX + " Created " + x.getName());
 		}
 	}
+
+  public static class FileSet {
+    public String   directory;
+    public String   outputDirectory;
+    public String[] includes;
+  }
 
 	public static class Pair<K, V>  {
 		public K key;
