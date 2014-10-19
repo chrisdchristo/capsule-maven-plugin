@@ -90,6 +90,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private Pair<String,String>[] properties; // System-Properties for the app
 	@Parameter
 	private Pair<String,String>[] manifest; // additional manifest entries
+  @Parameter
+  private Mode[] modes;
 
 	private String mainClass = DEFAULT_CAPSULE_NAME;
 
@@ -321,6 +323,20 @@ public class CapsuleMojo extends AbstractMojo {
 			for (final Pair<String,String> entry : this.manifest)
 				attributes.put(new Attributes.Name(entry.key), entry.value);
 
+    if (this.modes != null) {
+      for (final Mode mode : this.modes) {
+        if (mode.name != null && mode.manifest != null) {
+          Attributes entries = new Attributes();
+
+          for (final Pair<String, String> entry : mode.manifest) {
+            entries.put(new Attributes.Name(entry.key), entry.value);
+          }
+
+          manifestBuild.getEntries().put(mode.name, entries);
+        }
+      }
+    }
+
 		// write to jar
 		final ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
 		manifestBuild.write(dataStream);
@@ -504,8 +520,14 @@ public class CapsuleMojo extends AbstractMojo {
 		public Pair() {}
 		public Pair(final K key, final V value) { this.key = key; this.value = value; }
 	}
+
 	private static final Pair pull(final Pair[] pairs, final Object key) {
 		for (final Pair pair : pairs) if (pair.key.equals(key)) return pair;
 		return null;
 	}
+
+  public static class Mode {
+    private String name;
+    private Pair<String, String>[] manifest;
+  }
 }
