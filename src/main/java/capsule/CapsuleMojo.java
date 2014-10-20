@@ -77,7 +77,7 @@ public class CapsuleMojo extends AbstractMojo {
 	private File output;
 	@Deprecated
 	@Parameter(property = "capsule.buildExec", defaultValue = "false")
-	private String buildExec;
+	private String buildExec; // old way to set chmod
 	@Parameter(property = "capsule.chmod", defaultValue = "false")
 	private String chmod;
 	@Parameter(property = "capsule.trampoline", defaultValue = "false")
@@ -92,6 +92,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private Pair<String, String>[] manifest; // additional manifest entries
 	@Parameter
 	private Mode[] modes; // modes for specific properties and manifest entries
+	@Parameter
+	private FileSet[] fileSets; // assembly style filesets to add to the capsule
 
 	private String mainClass = DEFAULT_CAPSULE_NAME;
 
@@ -238,6 +240,9 @@ public class CapsuleMojo extends AbstractMojo {
 		for (final Map.Entry<String, byte[]> entry : capsuleClasses.entrySet())
 			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
+		// add some files and folders to the capsule
+		addFileSetsToJar(jarStream);
+
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
 	}
@@ -275,6 +280,9 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// add custom capsule class (if exists)
 		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
+
+		// add some files and folders to the capsule
+		addFileSetsToJar(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
@@ -407,6 +415,35 @@ public class CapsuleMojo extends AbstractMojo {
 		return otherClasses;
 	}
 
+	private void addFileSetsToJar(final JarOutputStream jar) throws IOException {
+		if (fileSets == null) return;
+
+		for (final FileSet fileSet : fileSets) {
+			if (fileSet.directory != null && !fileSet.directory.isEmpty()) {
+				final File directory = new File(fileSet.directory);
+
+				// warn & skip if not directory
+				if (!directory.isDirectory()) {
+					warn("Attempted to include file from non-directory [" + directory.getAbsolutePath() + "], skipping...");
+					continue;
+				}
+
+				if (fileSet.outputDirectory != null && !fileSet.outputDirectory.isEmpty()) {
+					if (!fileSet.outputDirectory.endsWith("/")) fileSet.outputDirectory += "/";
+					jar.putNextEntry(new ZipEntry(fileSet.outputDirectory));
+					jar.closeEntry();
+				} else {
+					fileSet.outputDirectory = "";
+				}
+
+				for (final String include : fileSet.includes) {
+					final FileInputStream fin = new FileInputStream(new File(directory, include));
+					addToJar(fileSet.outputDirectory + "/" + include, fin, jar);
+				}
+			}
+		}
+	}
+
 	private JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
 		try {
 			jar.putNextEntry(new ZipEntry(name));
@@ -537,6 +574,12 @@ public class CapsuleMojo extends AbstractMojo {
 		private String name;
 		private Pair<String, String>[] properties;
 		private Pair<String, String>[] manifest;
+	}
+
+	public static class FileSet {
+		public String directory;
+		public String outputDirectory;
+		public String[] includes;
 	}
 
 	private void printManifest(final Manifest manifest) {

@@ -222,7 +222,7 @@ Capsule supports the concept of modes, which essentially means defining your app
 You define different modes for your app by setting specific manifest and/or system properties for each mode. So for e.g you could have a test mode which will define a test database connection, and likewise a production mode which will define a production database connection.
 You can then easily run your capsule in a specific mode by adding the `-Dcapsule.mode=MODE` argument at the command line. See more at [capsule modes](https://github.com/puniverse/capsule#capsule-configuration-and-modes).
 
-The maven plugin supports a convenient way to define modes for your capsule.
+The maven plugin supports a convenient way to define modes for your capsule (include the below in the `<configuration>` tag).
 
 ```
 <modes>
@@ -252,6 +252,23 @@ However, the mode's manifest entries will be appended to the existing set of ent
 
 Of course, you can define multiple modes.
 
+## FileSets
+
+You can also specify assembly style `<fileSets>` in the `<configuration>` tag so you can add files to the capsule.
+
+```
+<fileSets>
+	<fileSet>
+		<directory>config/</directory>
+		<outputDirectory>config/</outputDirectory>
+		<includes>
+			<include>myconfig.yml</include>
+		</includes>
+	</fileSet>
+</fileSets>
+```
+
+You specify a number `<fileSet>` which must contain the `<directory>` (the location of the folder to copy), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the `<directory>` to copy over.
 
 ## Custom Capsule Version
 
