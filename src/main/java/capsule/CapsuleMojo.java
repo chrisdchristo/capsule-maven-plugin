@@ -215,6 +215,9 @@ public class CapsuleMojo extends AbstractMojo {
 		// add custom capsule class (if exists)
 		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
 
+		// add some files and folders to the capsule
+		addFileSetsToJar(jarStream);
+
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
 	}
