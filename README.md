@@ -216,6 +216,42 @@ So for e.g if you would like to set the `JVM-Args`:
 
 Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies`, `Repositories` and `System-Properties` as these are generated automatically by the plugin.
 
+## Modes
+
+Capsule supports the concept of modes, which essentially means defining your app jar into different ways depending on certain characteristics. 
+You define different modes for your app by setting specific manifest and/or system properties for each mode. So for e.g you could have a test mode which will define a test database connection, and likewise a production mode which will define a production database connection.
+You can then easily run your capsule in a specific mode by adding the `-Dcapsule.mode=MODE` argument at the command line. See more at [capsule modes](https://github.com/puniverse/capsule#capsule-configuration-and-modes).
+
+The maven plugin supports a convenient way to define modes for your capsule.
+
+```
+<modes>
+	<mode>
+		<name>production</name>
+		<properties>
+			<property>
+				<key>dbConnectionServer</key>
+				<value>aws.amazon.example</value>
+			</property>
+		</properties>
+		<manifest>
+      <entry>
+        <key>JVM-Args</key>
+        <value>-Xmx1024m</value>
+      </entry>
+    </manifest>
+	</mode>
+</modes>
+```
+
+A mode must have the `<name>` tag, and you may define two things for each mode, namely, `<properties>` and `<manifest>` (in exactly the same syntax as above).
+ 
+If the mode is activated at runtime (`-Dcapsule.mode=production`) then the properties listed in the mode will completely override the properties set in the main configuration. Thus, only the properties listed in the mode section will be available to the app.
+
+However, the mode's manifest entries will be appended to the existing set of entries defined in the main section (unless any match up, then the mode's entry will override). 
+
+Of course, you can define multiple modes.
+
 
 ## Custom Capsule Version
 

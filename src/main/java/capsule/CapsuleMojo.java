@@ -32,7 +32,7 @@ import java.util.zip.ZipException;
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
 public class CapsuleMojo extends AbstractMojo {
 
-	public static final String LOG_PREFIX = "[Capsule]";
+	public static final String LOG_PREFIX = "[Capsule] ";
 
 	public static final String CAPSULE_GROUP = "co.paralleluniverse";
 	public static final String DEFAULT_CAPSULE_NAME = "Capsule";
@@ -87,11 +87,11 @@ public class CapsuleMojo extends AbstractMojo {
 	@Parameter(property = "capsule.execPluginConfig")
 	private String execPluginConfig;
 	@Parameter
-	private Pair<String,String>[] properties; // System-Properties for the app
+	private Pair<String, String>[] properties; // System-Properties for the app
 	@Parameter
-	private Pair<String,String>[] manifest; // additional manifest entries
-  @Parameter
-  private Mode[] modes;
+	private Pair<String, String>[] manifest; // additional manifest entries
+	@Parameter
+	private Mode[] modes; // modes for specific properties and manifest entries
 
 	private String mainClass = DEFAULT_CAPSULE_NAME;
 
@@ -152,7 +152,7 @@ public class CapsuleMojo extends AbstractMojo {
 		if (buildEmpty) typesString.append('[' + Type.empty.name() + ']');
 		if (buildThin) typesString.append('[' + Type.thin.name() + ']');
 		if (buildFat) typesString.append('[' + Type.fat.name() + ']');
-		getLog().debug(LOG_PREFIX + " Types: " + typesString.toString());
+		debug("Types: " + typesString.toString());
 
 		// if no capsule ver specified, find the latest one
 		if (capsuleVersion == null) {
@@ -173,14 +173,14 @@ public class CapsuleMojo extends AbstractMojo {
 		);
 		if (illegalOutputPaths.contains(this.output.getPath())) {
 			this.output = this.buildDir;
-			getLog().debug(LOG_PREFIX + " Output was an illegal path, resorting to default build directory.");
+			debug("Output was an illegal path, resorting to default build directory.");
 		}
 
 		// build path if doesn't exist
 		if (!output.exists()) output.mkdirs();
 
-		getLog().debug(LOG_PREFIX + " Capsule Version: " + capsuleVersion.toString());
-		getLog().debug(LOG_PREFIX + " Output Directory: " + output.toString());
+		debug("Capsule Version: " + capsuleVersion.toString());
+		debug("Output Directory: " + output.toString());
 
 		try {
 			if (buildEmpty) buildEmpty();
@@ -264,7 +264,7 @@ public class CapsuleMojo extends AbstractMojo {
 		// add dependencies
 		for (final Artifact artifact : artifacts) {
 			if (artifact.getFile() == null) {
-				getLog().warn(LOG_PREFIX + " Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
+				warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
 			} else {
 				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
 			}
@@ -286,29 +286,28 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes, final Type type) throws IOException {
 		final Manifest manifestBuild = new Manifest();
-		final Attributes attributes = manifestBuild.getMainAttributes();
-		attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-		attributes.put(Attributes.Name.MAIN_CLASS, mainClass);
-		attributes.put(new Attributes.Name("Application-Class"), this.appClass);
-		attributes.put(new Attributes.Name("Application-Name"), this.finalName + "-capsule-" + type);
+		final Attributes mainAttributes = manifestBuild.getMainAttributes();
+		mainAttributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+		mainAttributes.put(Attributes.Name.MAIN_CLASS, mainClass);
+		mainAttributes.put(new Attributes.Name("Application-Class"), this.appClass);
+		mainAttributes.put(new Attributes.Name("Application-Name"), this.finalName + "-capsule-" + type);
 
 		// add properties
 		final String propertiesString = getSystemPropertiesString();
-		if (propertiesString != null) attributes.put(new Attributes.Name("System-Properties"), propertiesString);
+		if (propertiesString != null) mainAttributes.put(new Attributes.Name("System-Properties"), propertiesString);
 
 		// get arguments from exec plugin (if exist)
 		if (execConfig != null) {
 			final Xpp3Dom argsElement = execConfig.getChild("arguments");
 			if (argsElement != null) {
 				final Xpp3Dom[] argsElements = argsElement.getChildren();
-				getLog().debug("argsElementsSize: " + argsElements.length);
 				if (argsElements != null && argsElements.length > 0) {
 					final StringBuilder argsList = new StringBuilder();
 					for (final Xpp3Dom arg : argsElements) {
 						if (arg != null && arg.getValue() != null)
 							argsList.append(arg.getValue().replace(" ", "") + " ");
 					}
-					attributes.put(new Attributes.Name("JVM-Args"), argsList.toString());
+					mainAttributes.put(new Attributes.Name("JVM-Args"), argsList.toString());
 				}
 			}
 		}
@@ -316,26 +315,38 @@ public class CapsuleMojo extends AbstractMojo {
 		// additional attributes
 		if (additionalAttributes != null)
 			for (final Map.Entry<String, String> entry : additionalAttributes.entrySet())
-				attributes.put(new Attributes.Name(entry.getKey()), entry.getValue());
+				mainAttributes.put(new Attributes.Name(entry.getKey()), entry.getValue());
 
 		// custom user defined manifest entries (will override any before)
 		if (this.manifest != null)
-			for (final Pair<String,String> entry : this.manifest)
-				attributes.put(new Attributes.Name(entry.key), entry.value);
+			for (final Pair<String, String> entry : this.manifest)
+				mainAttributes.put(new Attributes.Name(entry.key), entry.value);
 
-    if (this.modes != null) {
-      for (final Mode mode : this.modes) {
-        if (mode.name != null && mode.manifest != null) {
-          Attributes entries = new Attributes();
-
-          for (final Pair<String, String> entry : mode.manifest) {
-            entries.put(new Attributes.Name(entry.key), entry.value);
-          }
-
-          manifestBuild.getEntries().put(mode.name, entries);
-        }
-      }
-    }
+		// mode sections
+		if (this.modes != null) {
+			for (final Mode mode : this.modes) {
+				if (mode.name == null) getLog().warn(LOG_PREFIX + "Mode defined without name, ignoring.");
+				else {
+					final Attributes modeAttributes = new Attributes();
+					// add manifest entries to the mode section (these entries will override the manifests' main entries if mode is selected at runtime)
+					if (mode.manifest != null) {
+						for (final Pair<String, String> entry : mode.manifest)
+							modeAttributes.put(new Attributes.Name(entry.key), entry.value);
+					}
+					// add properties to the mode, this set will override all properties of the previous set.
+					if (mode.properties != null) {
+						final StringBuilder modePropertiesList = new StringBuilder();
+						for (final Pair property : mode.properties)
+							if (property.key != null && property.value != null) {
+								modePropertiesList.append(property.key + "=" + property.value + " ");
+							}
+						if (modePropertiesList.length() > 0) modeAttributes.put(new Attributes.Name("System-Properties"), modePropertiesList.toString());
+					}
+					// finally add the mode's properties and manifest entries to its own section.
+					if (!modeAttributes.isEmpty()) manifestBuild.getEntries().put(mode.name, modeAttributes);
+				}
+			}
+		}
 
 		// write to jar
 		final ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
@@ -408,7 +419,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private Pair<File, JarOutputStream> openJar(final Type type) throws IOException {
 		final File file = new File(this.output, this.finalName + "-capsule-" + type.toString() + ".jar");
-		getLog().info(LOG_PREFIX + " Created " + file.getName());
+		info("Created " + file.getName());
 		return new Pair(file, new JarOutputStream(new FileOutputStream(file)));
 	}
 
@@ -482,13 +493,6 @@ public class CapsuleMojo extends AbstractMojo {
 		return propertiesList == null ? null : propertiesList.toString();
 	}
 
-	private void printManifest(final Manifest manifest) {
-		getLog().debug(LOG_PREFIX + " Manifest:");
-		for (final Map.Entry<Object, Object> entry : manifest.getMainAttributes().entrySet()) {
-			getLog().debug(LOG_PREFIX + "\t" + entry.getKey() + ": " + entry.getValue().toString());
-		}
-	}
-
 	private void createExecCopy(final File jar) throws IOException {
 		if (this.chmod.equals("true") || this.chmod.equals("1") || this.buildExec.equals("true") || this.buildExec.equals("1"))
 			createExecCopyProcess(jar, EXEC_PREFIX, ".x");
@@ -510,15 +514,18 @@ public class CapsuleMojo extends AbstractMojo {
 		} finally {
 			IOUtil.close(in);
 			IOUtil.close(out);
-			getLog().info(LOG_PREFIX + " Created " + x.getName());
+			info("Created " + x.getName());
 		}
 	}
 
-	public static class Pair<K, V>  {
+	public static class Pair<K, V> {
 		public K key;
 		public V value;
 		public Pair() {}
-		public Pair(final K key, final V value) { this.key = key; this.value = value; }
+		public Pair(final K key, final V value) {
+			this.key = key;
+			this.value = value;
+		}
 	}
 
 	private static final Pair pull(final Pair[] pairs, final Object key) {
@@ -526,8 +533,25 @@ public class CapsuleMojo extends AbstractMojo {
 		return null;
 	}
 
-  public static class Mode {
-    private String name;
-    private Pair<String, String>[] manifest;
-  }
+	public static class Mode {
+		private String name;
+		private Pair<String, String>[] properties;
+		private Pair<String, String>[] manifest;
+	}
+
+	private void printManifest(final Manifest manifest) {
+		debug("Manifest:");
+		for (final Map.Entry<Object, Object> attr : manifest.getMainAttributes().entrySet()) {
+			debug("\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
+		}
+		for (final Map.Entry<String, Attributes> entry : manifest.getEntries().entrySet()) {
+			debug("Name:" + entry.getKey());
+			for (final Map.Entry<Object, Object> attr : entry.getValue().entrySet()) {
+				debug("\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
+			}
+		}
+	}
+	private void debug(final String message) { getLog().debug(LOG_PREFIX + message); }
+	private void info(final String message) { getLog().info(LOG_PREFIX + message); }
+	private void warn(final String message) { getLog().warn(LOG_PREFIX + message); }
 }
