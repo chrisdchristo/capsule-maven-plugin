@@ -235,11 +235,11 @@ The maven plugin supports a convenient way to define modes for your capsule.
 			</property>
 		</properties>
 		<manifest>
-      <entry>
-        <key>JVM-Args</key>
-        <value>-Xmx1024m</value>
-      </entry>
-    </manifest>
+			<entry>
+				<key>JVM-Args</key>
+				<value>-Xmx1024m</value>
+				</entry>
+		</manifest>
 	</mode>
 </modes>
 ```
