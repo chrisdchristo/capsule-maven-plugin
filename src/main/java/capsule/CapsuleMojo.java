@@ -441,7 +441,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 				for (final String include : fileSet.includes) {
 					final FileInputStream fin = new FileInputStream(new File(directory, include));
-					addToJar(fileSet.outputDirectory + "/" + include, fin, jar);
+					addToJar(fileSet.outputDirectory + include, fin, jar);
 				}
 			}
 		}
