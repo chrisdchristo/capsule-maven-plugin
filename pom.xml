@@ -3,7 +3,7 @@
 
 	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
-	<version>y</version>
+	<version>0.9.1</version>
 	<packaging>maven-plugin</packaging>
 
 	<parent>
