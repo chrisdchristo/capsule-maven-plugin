@@ -426,6 +426,8 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule#reference) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies`, `Repositories` and `System-Properties` as these are generated automatically.
+* `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
+* `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets).
 
 ```
 <!-- BUILD CAPSULES -->
@@ -433,41 +435,69 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
+	<configuration>
+
+		<appClass>hello.HelloWorld</appClass>
+
+		<!-- <output>target/</output> -->
+		<!-- <chmod>true</chmod> -->
+		<!-- <trampoline>true</trampoline> -->
+		<!-- <types>thin fat</types> -->
+		<!-- <execPluginConfig>root</execPluginConfig> -->
+
+		<properties>
+			<property>
+				<key>propertyName1</key>
+				<value>propertyValue1</value>
+			</property>
+		</properties>
+
+		<manifest>
+			<entry>
+				<key>JVM-Args</key>
+				<value>-Xmx512m</value>
+			</entry>
+			<entry>
+				<key>Min-Java-Version</key>
+				<value>1.8.0</value>
+			</entry>
+		</manifest>
+
+		<modes>
+			<mode>
+				<name>production</name>
+				<properties>
+					<property>
+						<key>dbConnectionServer</key>
+						<value>aws.amazon.example</value>
+					</property>
+				</properties>
+				<manifest>
+					<entry>
+						<key>JVM-Args</key>
+						<value>-Xmx1024m</value>
+					</entry>
+				</manifest>
+			</mode>
+		</modes>
+
+		<fileSets>
+			<fileSet>
+				<directory>config/</directory>
+				<outputDirectory>config/</outputDirectory>
+				<includes>
+					<include>myconfig.yml</include>
+				</includes>
+			</fileSet>
+		</fileSets>
+
+	</configuration>
 	<executions>
 		<execution>
 			<phase>package</phase>
 			<goals>
 				<goal>build</goal>
 			</goals>
-			<configuration>
-
-				<appClass>hello.HelloWorld</appClass>
-
-				<!-- <output>target/</output> -->
-				<!-- <chmod>true</chmod> -->
-				<!-- <trampoline>true</trampoline> -->
-				<!-- <types>thin fat</types> -->
-				<!-- <execPluginConfig>root</execPluginConfig> -->
-
-				<properties>
-					<property>
-						<key>propertyName1</key>
-						<value>propertyValue1</value>
-					</property>
-				</properties>
-
-				<manifest>
-					<entry>
-						<key>JVM-Args</key>
-						<value>-Xmx512m</value>
-					</entry>
-					<entry>
-						<key>Min-Java-Version</key>
-						<value>1.8.0</value>
-					</entry>
-				</manifest>
-
-			</configuration>
 		</execution>
 	</executions>
 </plugin>
