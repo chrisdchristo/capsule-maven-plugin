@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-0.9.0-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-0.9.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-0.9.1-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-0.9.1-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
@@ -218,7 +218,7 @@ Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Depe
 
 ## Modes
 
-Capsule supports the concept of modes, which essentially means defining your app jar into different ways depending on certain characteristics. 
+Capsule supports the concept of modes, which essentially means defining your app jar into different ways depending on certain characteristics.
 You define different modes for your app by setting specific manifest and/or system properties for each mode. So for e.g you could have a test mode which will define a test database connection, and likewise a production mode which will define a production database connection.
 You can then easily run your capsule in a specific mode by adding the `-Dcapsule.mode=MODE` argument at the command line. See more at [capsule modes](https://github.com/puniverse/capsule#capsule-configuration-and-modes).
 
@@ -245,10 +245,10 @@ The maven plugin supports a convenient way to define modes for your capsule (inc
 ```
 
 A mode must have the `<name>` tag, and you may define two things for each mode, namely, `<properties>` and `<manifest>` (in exactly the same syntax as above).
- 
+
 If the mode is activated at runtime (`-Dcapsule.mode=production`) then the properties listed in the mode will completely override the properties set in the main configuration. Thus, only the properties listed in the mode section will be available to the app.
 
-However, the mode's manifest entries will be appended to the existing set of entries defined in the main section (unless any match up, then the mode's entry will override). 
+However, the mode's manifest entries will be appended to the existing set of entries defined in the main section (unless any match up, then the mode's entry will override).
 
 Of course, you can define multiple modes.
 
