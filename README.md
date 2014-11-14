@@ -42,7 +42,7 @@ In the simplest form, you can add the following snippet in your `pom.xml`:
 And then run:
 
 ```
-mvn capsule:build
+mvn package capsule:build
 ```
 
 The only requirement is to have the `<appClass>` attribute in the configuration. This is the class of your app that contains the main method which will be fired on startup. You must include the package path along with the class name (`hello` is the package and `HelloWorld` is the class name above).
@@ -58,7 +58,6 @@ It is recommended to have an execution setup to build the capsules during the pa
 	<version>${capsule.maven.plugin.version}</version>
 	<executions>
 		<execution>
-			<phase>package</phase>
 			<goals>
 				<goal>build</goal>
 			</goals>
@@ -494,7 +493,6 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 	</configuration>
 	<executions>
 		<execution>
-			<phase>package</phase>
 			<goals>
 				<goal>build</goal>
 			</goals>
