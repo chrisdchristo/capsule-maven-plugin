@@ -45,6 +45,8 @@ And then run:
 mvn package capsule:build
 ```
 
+Please note that the `package` command must have been executed before the `capsule:build` command can be run.
+
 The only requirement is to have the `<appClass>` attribute in the configuration. This is the class of your app that contains the main method which will be fired on startup. You must include the package path along with the class name (`hello` is the package and `HelloWorld` is the class name above).
 
 ## Package Phase Building
