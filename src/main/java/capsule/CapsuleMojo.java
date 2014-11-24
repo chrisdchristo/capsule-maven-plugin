@@ -85,6 +85,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private String trampoline;
 	@Parameter(property = "capsule.types")
 	private String types;
+	@Parameter(property = "capsule.caplets")
+	private String caplets;
 	@Parameter(property = "capsule.execPluginConfig")
 	private String execPluginConfig;
 	@Parameter
@@ -99,6 +101,9 @@ public class CapsuleMojo extends AbstractMojo {
 	private String mainClass = DEFAULT_CAPSULE_NAME;
 
 	private Xpp3Dom execConfig = null;
+
+	// will be loaded when run
+	private final Map<String, File> capletFiles = new HashMap();
 
 	/**
 	 * DEPENDENCIES
@@ -135,9 +140,33 @@ public class CapsuleMojo extends AbstractMojo {
 		if (appClass == null)
 			throw new MojoFailureException(LOG_PREFIX + " appClass not set (or could not be obtained from the exec plugin mainClass)");
 
-		// check for custom capsule main class
-		if (manifest != null && pull(manifest, Attributes.Name.MAIN_CLASS.toString()) != null)
-			mainClass = (String) pull(manifest, Attributes.Name.MAIN_CLASS.toString()).value;
+		// check for caplets existence
+		if (caplets != null && !caplets.isEmpty()) {
+			final StringBuilder capletString = new StringBuilder();
+			final File classesDir = new File(this.buildDir, "classes");
+			for (final String caplet : this.caplets.split(" ")) {
+				try {
+					Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
+						@Override
+						public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) {
+							if (!attrs.isDirectory() && path.toString().contains(caplet)) {
+								capletFiles.put(caplet, path.toFile());
+								return FileVisitResult.TERMINATE;
+							}
+							return FileVisitResult.CONTINUE;
+						}
+					});
+				} catch (final IOException e) { e.printStackTrace(); }
+
+				if (!capletFiles.containsKey(caplet)) {
+					warn("Could not find caplet " + caplet + " class, skipping.");
+				} else {
+					if (capletString.length() > 0) capletString.append(" ");
+					capletString.append(caplet);
+				}
+			}
+			caplets = capletString.toString();
+		}
 
 		// check build types
 		boolean buildEmpty = true, buildThin = true, buildFat = true;
@@ -206,7 +235,7 @@ public class CapsuleMojo extends AbstractMojo {
 		final Map<String, String> additionalAttributes = new HashMap();
 		additionalAttributes.put("Application", mavenProject.getGroupId() + ":" + mavenProject.getArtifactId() + ":" + mavenProject.getVersion());
 		additionalAttributes.put("Repositories", getRepoString());
-		deployManifestToJar(jarStream, additionalAttributes, Type.empty);
+		addManifest(jarStream, additionalAttributes, Type.empty);
 
 		// add Capsule classes
 		final Map<String, byte[]> otherCapsuleClasses = getAllCapsuleClasses();
@@ -214,10 +243,10 @@ public class CapsuleMojo extends AbstractMojo {
 			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
 		// add custom capsule class (if exists)
-		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
+		addCapletClasses(jarStream);
 
 		// add some files and folders to the capsule
-		addFileSetsToJar(jarStream);
+		addFileSets(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
@@ -234,7 +263,7 @@ public class CapsuleMojo extends AbstractMojo {
 		final Map<String, String> additionalAttributes = new HashMap();
 		additionalAttributes.put("Dependencies", getDependencyString());
 		additionalAttributes.put("Repositories", getRepoString());
-		deployManifestToJar(jarStream, additionalAttributes, Type.thin);
+		addManifest(jarStream, additionalAttributes, Type.thin);
 
 		// add compiled project classes
 		this.addCompiledProjectClasses(jarStream);
@@ -244,8 +273,11 @@ public class CapsuleMojo extends AbstractMojo {
 		for (final Map.Entry<String, byte[]> entry : capsuleClasses.entrySet())
 			addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
+		// add custom capsule class (if exists)
+		addCapletClasses(jarStream);
+
 		// add some files and folders to the capsule
-		addFileSetsToJar(jarStream);
+		addFileSets(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
@@ -259,7 +291,7 @@ public class CapsuleMojo extends AbstractMojo {
 		final JarOutputStream jarStream = jar.value;
 
 		// add manifest
-		deployManifestToJar(jarStream, null, Type.fat);
+		addManifest(jarStream, null, Type.fat);
 
 		// add main jar
 		try {
@@ -267,6 +299,7 @@ public class CapsuleMojo extends AbstractMojo {
 			addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jarStream);
 		} catch (final FileNotFoundException e) { // if project jar wasn't built (perhaps the mvn package wasn't run, and only the mvn compile was run)
 			// add compiled project classes instead
+			warn("Couldn't add main jar file to fat capsule, adding the project classes directly instead.");
 			this.addCompiledProjectClasses(jarStream);
 		}
 
@@ -283,10 +316,10 @@ public class CapsuleMojo extends AbstractMojo {
 		this.addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
 
 		// add custom capsule class (if exists)
-		if (!mainClass.equals(DEFAULT_CAPSULE_CLASS)) addCustomCapsuleClass(jarStream);
+		addCapletClasses(jarStream);
 
 		// add some files and folders to the capsule
-		addFileSetsToJar(jarStream);
+		addFileSets(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
@@ -296,7 +329,7 @@ public class CapsuleMojo extends AbstractMojo {
 	 * UTILS
 	 */
 
-	private JarOutputStream deployManifestToJar(final JarOutputStream jar, final Map<String, String> additionalAttributes, final Type type) throws IOException {
+	private JarOutputStream addManifest(final JarOutputStream jar, final Map<String, String> additionalAttributes, final Type type) throws IOException {
 		final Manifest manifestBuild = new Manifest();
 		final Attributes mainAttributes = manifestBuild.getMainAttributes();
 		mainAttributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
@@ -328,6 +361,10 @@ public class CapsuleMojo extends AbstractMojo {
 		if (additionalAttributes != null)
 			for (final Map.Entry<String, String> entry : additionalAttributes.entrySet())
 				mainAttributes.put(new Attributes.Name(entry.getKey()), entry.getValue());
+
+		// caplets
+		if (this.caplets != null && !this.caplets.isEmpty())
+			mainAttributes.put(new Attributes.Name("Caplets"), this.caplets);
 
 		// custom user defined manifest entries (will override any before)
 		if (this.manifest != null)
@@ -376,25 +413,23 @@ public class CapsuleMojo extends AbstractMojo {
 		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
 			@Override
 			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
-				if (!attrs.isDirectory())
+				if (!attrs.isDirectory() && !path.endsWith(".DS_Store") && !path.endsWith("MANIFEST.MF")) {
 					addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(path.toFile()), jarStream);
+					getLog().debug("Adding Compile Project Class to Capsule: [" + path.toFile().getPath() + "]");
+				}
 				return FileVisitResult.CONTINUE;
 			}
 		});
 	}
 
-	private void addCustomCapsuleClass(final JarOutputStream jarStream) throws IOException {
-		final File classesDir = new File(this.buildDir, "classes");
-		Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
-			@Override
-			public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
-				if (!attrs.isDirectory() && path.toString().contains(mainClass)) {
-					addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(path.toFile()), jarStream);
-					return FileVisitResult.TERMINATE;
-				}
-				return FileVisitResult.CONTINUE;
+	private void addCapletClasses(final JarOutputStream jarStream) throws IOException {
+		if (caplets != null && !caplets.isEmpty()) {
+			final File classesDir = new File(this.buildDir, "classes");
+			for (final Map.Entry<String, File> caplet : this.capletFiles.entrySet()) {
+				final String path = caplet.getValue().getPath();
+				addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(caplet.getValue()), jarStream);
 			}
-		});
+		}
 	}
 
 	private byte[] getCapsuleClass() throws IOException {
@@ -419,7 +454,7 @@ public class CapsuleMojo extends AbstractMojo {
 		return otherClasses;
 	}
 
-	private void addFileSetsToJar(final JarOutputStream jar) throws IOException {
+	private void addFileSets(final JarOutputStream jar) throws IOException {
 		if (fileSets == null) return;
 
 		for (final FileSet fileSet : fileSets) {

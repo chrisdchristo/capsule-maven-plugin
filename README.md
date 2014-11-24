@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-0.9.1-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-0.9.1-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-0.10.0-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-0.10.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
@@ -70,6 +70,8 @@ It is recommended to have an execution setup to build the capsules during the pa
 	</executions>
 </plugin>
 ```
+
+Or alternatively you could use the `maven-exec-plugin` to run your app (as you develop), and then only build the capsule(s) when you want to deploy to a server. This plugin integrates nicely with the `maven-exec-plugin`, [see here](https://github.com/chrischristo/capsule-maven-plugin#maven-exec-plugin-integration).
 
 ## Capsule Types
 
@@ -282,23 +284,20 @@ Ths plugin can support older versions of capsule (at your own risk). You can spe
 ```
 Otherwise, the latest version of capsule will be used automatically. This is recommended.
 
-## Custom Capsule Class
+## Caplets
 
 Capsule supports defining your own Capsule class by extending the `Capsule.class`. If you want to specify your custom Capsule class, add a manifest entry pointing to it:
 
 ```
 <configuration>
 	<appClass>hello.HelloWorld</appClass>
-	<manifest>
-		<entry>
-			<key>Main-Class</key>
-			<value>MyCapsule</value>
-		</entry>
-	</manifest>
+	<caplets>MyCapsule</caplets>
 </configuration>
 ```
 
-See more info on [custom capsules](https://github.com/puniverse/capsule#custom-capsules).
+If you have more than one, just add a space in between each one for e.g `<caplets>MyCapsule MyCapsule2</caplets>`.
+
+See more info on [caplets](https://github.com/puniverse/capsule#caplets).
 
 ## Maven Exec Plugin Integration
 
@@ -429,6 +428,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule#reference) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies`, `Repositories` and `System-Properties` as these are generated automatically.
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets).
+* `<caplets> (Optional)`: Define a list of caplets (custom Capsule classes). [See more here](https://github.com/chrischristo/capsule-maven-plugin#caplets).
 
 ```
 <!-- BUILD CAPSULES -->
@@ -445,6 +445,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<!-- <trampoline>true</trampoline> -->
 		<!-- <types>thin fat</types> -->
 		<!-- <execPluginConfig>root</execPluginConfig> -->
+		<!-- <caplets>MyCapsule MyCapsule2</caplets> -->
 
 		<properties>
 			<property>
