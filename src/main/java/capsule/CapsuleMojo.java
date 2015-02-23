@@ -76,6 +76,12 @@ public class CapsuleMojo extends AbstractMojo {
 	private String capsuleVersion;
 	@Parameter(property = "capsule.output", defaultValue = "${project.build.directory}")
 	private File output;
+	@Parameter(property = "capsule.customDescriptorEmpty", defaultValue = "-capsule-empty")
+	private String customDescriptorEmpty;
+	@Parameter(property = "capsule.customDescriptorThin", defaultValue = "-capsule-thin")
+	private String customDescriptorThin;
+	@Parameter(property = "capsule.customDescriptorFat", defaultValue = "-capsule-fat")
+	private String customDescriptorFat;
 	@Deprecated
 	@Parameter(property = "capsule.buildExec", defaultValue = "false")
 	private String buildExec; // old way to set chmod
@@ -335,7 +341,10 @@ public class CapsuleMojo extends AbstractMojo {
 		mainAttributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
 		mainAttributes.put(Attributes.Name.MAIN_CLASS, mainClass);
 		mainAttributes.put(new Attributes.Name("Application-Class"), this.appClass);
-		mainAttributes.put(new Attributes.Name("Application-Name"), this.finalName + "-capsule-" + type);
+
+
+
+		mainAttributes.put(new Attributes.Name("Application-Name"), this.getOutputName(type));
 
 		// add properties
 		final String propertiesString = getSystemPropertiesString();
@@ -494,7 +503,7 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private Pair<File, JarOutputStream> openJar(final Type type) throws IOException {
-		final File file = new File(this.output, this.finalName + "-capsule-" + type.toString() + ".jar");
+		final File file = new File(this.output, this.finalName + getOutputName(type) + ".jar");
 		info("Created " + file.getName());
 		return new Pair(file, new JarOutputStream(new FileOutputStream(file)));
 	}
@@ -592,6 +601,14 @@ public class CapsuleMojo extends AbstractMojo {
 			IOUtil.close(out);
 			info("Created " + x.getName());
 		}
+	}
+
+	private String getOutputName(final Type type) {
+		String outputName = this.finalName;
+		if (type == Type.empty) outputName += this.customDescriptorEmpty;
+		else if (type == Type.thin) outputName += this.customDescriptorThin;
+		else if (type == Type.fat) outputName += this.customDescriptorFat;
+		return outputName;
 	}
 
 	public static class Pair<K, V> {

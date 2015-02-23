@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-0.10.0-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-0.10.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-0.10.1-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-0.10.1-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
@@ -219,6 +219,40 @@ So for e.g if you would like to set the `JVM-Args`:
 
 Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies`, `Repositories` and `System-Properties` as these are generated automatically by the plugin.
 
+## Custom File Names
+
+The output capsule jars are names as per the `<finalName>` tag with the appending of the 'descriptor' to define what type of capsule it is.
+
+```
+<finalName><customDescriptorEmpty>.jar
+<finalName><customDescriptorThin>.jar
+<finalName><customDescriptorFat>.jar
+```
+
+So for example if you'd like to have your output 'thin' jar like 'my-amazing-app-thin-cap.jar' then you would do the following:
+ 
+```
+<build>
+	<finalName>my-amazing-app</finalName>
+	<plugins>
+		<plugin>
+      <groupId>com.github.chrischristo</groupId>
+      <artifactId>capsule-maven-plugin</artifactId>
+      <version>${capsule.maven.plugin.version}</version>
+      <configuration>
+
+      <appClass>hello.HelloWorld</appClass>
+      <!--<customDescriptorEmpty>-empty-cap</customDescriptorEmpty>-->
+      <customDescriptorThin>-thin-cap</customDescriptorThin>
+      <!--<customDescriptorFat>-fat-cap</customDescriptorFat>-->
+		</plugin>
+	</plugins>
+</build>
+```
+
+Note by default the descriptor tags are `-capsule-empty`, `-capsule-thing` and `-capsule-fat`. 
+
+
 ## Modes
 
 Capsule supports the concept of modes, which essentially means defining your app jar into different ways depending on certain characteristics.
@@ -429,6 +463,9 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets).
 * `<caplets> (Optional)`: Define a list of caplets (custom Capsule classes). [See more here](https://github.com/chrischristo/capsule-maven-plugin#caplets).
+* `<customDescriptorEmpty> (Optional)`: The custom text for the descriptor part of the name of the empty output jar. This combined with the `<finalName>` tag creates the output name of the jar.
+* `<customDescriptorThin> (Optional)`: The custom text for the descriptor part of the name of the thin output jar. This combined with the `<finalName>` tag creates the output name of the jar.
+* `<customDescriptorFat> (Optional)`: The custom text for the descriptor part of the name of the fat output jar. This combined with the `<finalName>` tag creates the output name of the jar.
 
 ```
 <!-- BUILD CAPSULES -->
@@ -446,6 +483,9 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<!-- <types>thin fat</types> -->
 		<!-- <execPluginConfig>root</execPluginConfig> -->
 		<!-- <caplets>MyCapsule MyCapsule2</caplets> -->
+		<!-- <customDescriptorEmpty>-cap-empty</customDescriptorEmpty> -->
+    <!-- <customDescriptorThin>-cap-thin</customDescriptorThin> -->
+    <!-- <customDescriptorFat>-cap-fat</customDescriptorFat> -->
 
 		<properties>
 			<property>
