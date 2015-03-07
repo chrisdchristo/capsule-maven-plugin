@@ -503,7 +503,7 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private Pair<File, JarOutputStream> openJar(final Type type) throws IOException {
-		final File file = new File(this.output, this.finalName + getOutputName(type) + ".jar");
+		final File file = new File(this.output, getOutputName(type) + ".jar");
 		info("Created " + file.getName());
 		return new Pair(file, new JarOutputStream(new FileOutputStream(file)));
 	}
