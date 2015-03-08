@@ -117,6 +117,8 @@ public class CapsuleMojo extends AbstractMojo {
 	@Parameter(defaultValue = "${project.artifacts}") // will only contain scope of compile+runtime
 	private Collection<Artifact> artifacts;
 
+	private File resolvedCapsuleProjectFile = null;
+
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 
@@ -198,7 +200,14 @@ public class CapsuleMojo extends AbstractMojo {
 			final VersionRangeRequest request = new VersionRangeRequest().setRepositories(remoteRepos).setArtifact(artifact);
 			try {
 				final VersionRangeResult result = repoSystem.resolveVersionRange(repoSession, request);
-				capsuleVersion = result.getHighestVersion() != null ? result.getHighestVersion().toString() : null;
+				// get the latest version that is not a snapshot
+				for (int i = result.getVersions().size()-1; i >= 0; i--) {
+					final String currentVersion = result.getVersions().get(i).toString();
+					if (!currentVersion.contains("SNAPSHOT")) {
+						capsuleVersion = result.getVersions().get(i).toString();
+						break;
+					}
+				}
 			} catch (VersionRangeResolutionException e) {
 				throw new MojoFailureException(e.getMessage());
 			}
@@ -217,7 +226,7 @@ public class CapsuleMojo extends AbstractMojo {
 		// build path if doesn't exist
 		if (!output.exists()) output.mkdirs();
 
-		debug("Capsule Version: " + capsuleVersion.toString());
+		info("Using Capsule Version: " + capsuleVersion.toString());
 		debug("Output Directory: " + output.toString());
 
 		try {
@@ -509,13 +518,16 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private File resolveCapsule() throws IOException {
-		final ArtifactResult artifactResult;
-		try {
-			artifactResult = this.resolve(CAPSULE_GROUP, "capsule", capsuleVersion);
-		} catch (final ArtifactResolutionException e) {
-			throw new IOException("Capsule not found from repos");
+		if (this.resolvedCapsuleProjectFile == null) {
+			final ArtifactResult artifactResult;
+			try {
+				artifactResult = this.resolve(CAPSULE_GROUP, "capsule", capsuleVersion);
+			} catch (final ArtifactResolutionException e) {
+				throw new IOException("Capsule not found from repos");
+			}
+			this.resolvedCapsuleProjectFile = artifactResult.getArtifact().getFile();
 		}
-		return artifactResult.getArtifact().getFile();
+		return this.resolvedCapsuleProjectFile;
 	}
 
 	private ArtifactResult resolve(final String groupId, final String artifactId, final String version) throws ArtifactResolutionException {
