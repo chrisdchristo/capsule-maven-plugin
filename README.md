@@ -289,9 +289,9 @@ However, the mode's manifest entries will be appended to the existing set of ent
 
 Of course, you can define multiple modes.
 
-## FileSets
+## FileSets and DependencySets
 
-You can also specify assembly style `<fileSets>` in the `<configuration>` tag so you can add files to the capsule.
+You can also specify assembly style `<fileSets>` and `<dependencySets>` in the `<configuration>` tag so you can add files to the capsule.
 
 ```
 <fileSets>
@@ -305,7 +305,23 @@ You can also specify assembly style `<fileSets>` in the `<configuration>` tag so
 </fileSets>
 ```
 
-You specify a number `<fileSet>` which must contain the `<directory>` (the location of the folder to copy), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the `<directory>` to copy over.
+```
+<dependencySets>
+	<dependencySet>
+		<groupId>groupId</groupId>
+		<artifactId>artifactId</artifactId>
+		<version>optional version</version>
+		<outputDirectory>config/</outputDirectory>
+		<includes>
+			<include>path/in/artifact/file.ext</include>
+		</includes>
+	</dependencySet>
+</dependencySets>
+```
+
+You specify a number of `<fileSet>` which must contain the `<directory>` (the location of the folder to copy), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the `<directory>` to copy over.
+
+You specify a number of `<dependencySet>` which must contain the GAV of a project dependency (the version is optional), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the dependency to copy over.
 
 ## Custom Capsule Version
 
