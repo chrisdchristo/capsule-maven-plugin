@@ -1,10 +1,10 @@
 package capsule;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Exclusion;
-import org.apache.maven.model.Plugin;
-import org.apache.maven.model.PluginExecution;
+import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
+import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
+import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
+import org.apache.maven.model.*;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -103,6 +103,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private Mode[] modes; // modes for specific properties and manifest entries
 	@Parameter
 	private FileSet[] fileSets; // assembly style filesets to add to the capsule
+	@Parameter
+	private DependencySet[] dependencySets; // assembly style dependency sets to add to the capsule
 
 	private String mainClass = DEFAULT_CAPSULE_NAME;
 
@@ -262,6 +264,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// add some files and folders to the capsule
 		addFileSets(jarStream);
+		addDependencySets(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
@@ -293,6 +296,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// add some files and folders to the capsule
 		addFileSets(jarStream);
+		addDependencySets(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
@@ -335,6 +339,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// add some files and folders to the capsule
 		addFileSets(jarStream);
+		addDependencySets(jarStream);
 
 		IOUtil.close(jarStream);
 		this.createExecCopy(jar.key);
@@ -485,20 +490,55 @@ public class CapsuleMojo extends AbstractMojo {
 					continue;
 				}
 
-				if (fileSet.outputDirectory != null && !fileSet.outputDirectory.isEmpty()) {
-					if (!fileSet.outputDirectory.endsWith("/")) fileSet.outputDirectory += "/";
-					jar.putNextEntry(new ZipEntry(fileSet.outputDirectory));
-					jar.closeEntry();
-				} else {
-					fileSet.outputDirectory = "";
-				}
+				String outputDirectory = updateOutputDirectory(jar, fileSet.outputDirectory);
 
 				for (final String include : fileSet.includes) {
 					final FileInputStream fin = new FileInputStream(new File(directory, include));
-					addToJar(fileSet.outputDirectory + include, fin, jar);
+					addToJar(outputDirectory + include, fin, jar);
 				}
 			}
 		}
+	}
+
+	private void addDependencySets(final JarOutputStream jar) throws IOException {
+		if (dependencySets == null) return;
+
+		for (final DependencySet dependencySet : dependencySets ) {
+			for ( Artifact artifact : artifacts ) {
+				if (dependencySet.groupId.equals(artifact.getGroupId()) && dependencySet.artifactId.equals(artifact.getArtifactId())) {
+					if ( dependencySet.version == null || dependencySet.version.equals(artifact.getVersion()) ) {
+						if (artifact.getFile() == null) {
+							warn("Could not resolve dependency: " + dependencySet.groupId + ":" + dependencySet.artifactId + ":" + dependencySet.version);
+							continue;
+						}
+
+						JarFile jarFile = new JarFile(artifact.getFile());
+
+						String outputDirectory = updateOutputDirectory(jar, dependencySet.outputDirectory);
+						for (final String include : dependencySet.includes) {
+							ZipEntry entry = jarFile.getEntry(include);
+							if (entry != null) {
+								info("Adding " + include + " from " + artifact.getFile());
+								addToJar(outputDirectory + include, jarFile.getInputStream(entry), jar);
+							} else {
+								warn(include + " not found in " + artifact.getFile());
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private String updateOutputDirectory(JarOutputStream jar, String outputDirectory) throws IOException {
+		if (outputDirectory != null && !outputDirectory.isEmpty()) {
+            if (!outputDirectory.endsWith("/")) outputDirectory += "/";
+            jar.putNextEntry(new ZipEntry(outputDirectory));
+            jar.closeEntry();
+        } else {
+            outputDirectory = "";
+        }
+		return outputDirectory;
 	}
 
 	private JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
@@ -642,6 +682,14 @@ public class CapsuleMojo extends AbstractMojo {
 		private String name;
 		private Pair<String, String>[] properties;
 		private Pair<String, String>[] manifest;
+	}
+
+	public static class DependencySet {
+		public String groupId;
+		public String artifactId;
+		public String version;
+		public String outputDirectory;
+		public String[] includes;
 	}
 
 	public static class FileSet {
