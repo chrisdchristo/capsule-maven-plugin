@@ -291,7 +291,8 @@ Of course, you can define multiple modes.
 
 ## FileSets and DependencySets
 
-You can also specify assembly style `<fileSets>` and `<dependencySets>` in the `<configuration>` tag so you can add files to the capsule.
+If you'd like to copy over specific files from some local folder or from files embedded in some dependency then you can use the 
+ assembly style `<fileSets>` and `<dependencySets>` in the `<configuration>` tag.
 
 ```
 <fileSets>
@@ -305,19 +306,22 @@ You can also specify assembly style `<fileSets>` and `<dependencySets>` in the `
 </fileSets>
 ```
 
-```
+```	
 <dependencySets>
 	<dependencySet>
-		<groupId>groupId</groupId>
-		<artifactId>artifactId</artifactId>
-		<version>optional version</version>
+		<groupId>com.google.guava</groupId>
+		<artifactId>guava</artifactId>
+		<version>optional</version>
 		<outputDirectory>config/</outputDirectory>
 		<includes>
-			<include>path/in/artifact/file.ext</include>
+			<include>META-INF/MANIFEST.MF</include> 
 		</includes>
 	</dependencySet>
 </dependencySets>
 ```
+
+So from above we copy over the myconfig.yml file that we have in our config folder and place it within the config directory in the capsule jar (the plugin will create this folder in the capsule jar).
+And likewise with the dependency set defined, we pull the manifest file from within Google Guava's jar.
 
 You specify a number of `<fileSet>` which must contain the `<directory>` (the location of the folder to copy), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the `<directory>` to copy over.
 
@@ -477,7 +481,8 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<properties> (Optional)`: The system properties to provide the app with.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule#reference) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
-* `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets).
+* `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
+* `<dependencySets> (Optional)`: Define a set of `<dependencySet>` to copy over files contained within remote dependencies into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
 * `<caplets> (Optional)`: Define a list of caplets (custom Capsule classes). [See more here](https://github.com/chrischristo/capsule-maven-plugin#caplets).
 * `<customDescriptorEmpty> (Optional)`: The custom text for the descriptor part of the name of the empty output jar. This combined with the `<finalName>` tag creates the output name of the jar.
 * `<customDescriptorThin> (Optional)`: The custom text for the descriptor part of the name of the thin output jar. This combined with the `<finalName>` tag creates the output name of the jar.
@@ -548,6 +553,18 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 				</includes>
 			</fileSet>
 		</fileSets>
+		
+		<dependencySets>
+    	<dependencySet>
+    		<groupId>com.google.guava</groupId>
+    		<artifactId>guava</artifactId>
+    		<version>optional</version>
+    		<outputDirectory>config/</outputDirectory>
+    		<includes>
+    			<include>META-INF/MANIFEST.MF</include> 
+    		</includes>
+    	</dependencySet>
+    </dependencySets>
 
 	</configuration>
 	<executions>
