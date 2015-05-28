@@ -1,10 +1,10 @@
 package capsule;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
-import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
-import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
-import org.apache.maven.model.*;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Exclusion;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -29,7 +29,6 @@ import java.util.jar.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 
-
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
 public class CapsuleMojo extends AbstractMojo {
 
@@ -51,73 +50,68 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	@Parameter(defaultValue = "${project}", readonly = true)
-	private MavenProject mavenProject;
+	private MavenProject mavenProject = null;
 
 	/**
 	 * AETHER REPO LINK
 	 */
 	@Component
-	private RepositorySystem repoSystem;
+	private RepositorySystem repoSystem = null;
 	@Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
-	private RepositorySystemSession repoSession;
+	private RepositorySystemSession repoSession = null;
 	@Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
-	private List<RemoteRepository> remoteRepos;
+	private List<RemoteRepository> remoteRepos = null;
 	@Parameter(defaultValue = "${project.build.finalName}", readonly = true)
-	private String finalName;
+	private String finalName = null;
 	@Parameter(defaultValue = "${project.build.directory}")
-	private File buildDir;
+	private File buildDir = null;
 
 	/**
 	 * OPTIONAL VARIABLES
 	 */
 	@Parameter(property = "capsule.appClass")
-	private String appClass;
+	private String appClass = null;
 	@Parameter(property = "capsule.version")
-	private String capsuleVersion;
+	private String capsuleVersion = null;
 	@Parameter(property = "capsule.output", defaultValue = "${project.build.directory}")
-	private File output;
+	private File output = null;
 	@Parameter(property = "capsule.customDescriptorEmpty", defaultValue = "-capsule-empty")
-	private String customDescriptorEmpty;
+	private String customDescriptorEmpty = null;
 	@Parameter(property = "capsule.customDescriptorThin", defaultValue = "-capsule-thin")
-	private String customDescriptorThin;
+	private String customDescriptorThin = null;
 	@Parameter(property = "capsule.customDescriptorFat", defaultValue = "-capsule-fat")
-	private String customDescriptorFat;
-	@Deprecated
-	@Parameter(property = "capsule.buildExec", defaultValue = "false")
-	private String buildExec; // old way to set chmod
+	private String customDescriptorFat = null;
 	@Parameter(property = "capsule.chmod", defaultValue = "false")
-	private String chmod;
+	private String chmod = null;
 	@Parameter(property = "capsule.trampoline", defaultValue = "false")
-	private String trampoline;
+	private String trampoline = null;
 	@Parameter(property = "capsule.types")
-	private String types;
+	private String types = null;
 	@Parameter(property = "capsule.caplets")
 	private String caplets;
 	@Parameter(property = "capsule.execPluginConfig")
-	private String execPluginConfig;
+	private String execPluginConfig = null;
 	@Parameter
-	private Pair<String, String>[] properties; // System-Properties for the app
+	private Pair<String, String>[] properties = null; // System-Properties for the app
 	@Parameter
-	private Pair<String, String>[] manifest; // additional manifest entries
+	private Pair<String, String>[] manifest = null; // additional manifest entries
 	@Parameter
-	private Mode[] modes; // modes for specific properties and manifest entries
+	private Mode[] modes = null; // modes for specific properties and manifest entries
 	@Parameter
-	private FileSet[] fileSets; // assembly style filesets to add to the capsule
+	private FileSet[] fileSets = null; // assembly style filesets to add to the capsule
 	@Parameter
-	private DependencySet[] dependencySets; // assembly style dependency sets to add to the capsule
-
-	private String mainClass = DEFAULT_CAPSULE_NAME;
+	private DependencySet[] dependencySets = null; // assembly style dependency sets to add to the capsule
 
 	private Xpp3Dom execConfig = null;
 
 	// will be loaded when run
-	private final Map<String, File> capletFiles = new HashMap();
+	private final Map<String, File> capletFiles = new HashMap<>();
 
 	/**
 	 * DEPENDENCIES
 	 */
 	@Parameter(defaultValue = "${project.artifacts}") // will only contain scope of compile+runtime
-	private Collection<Artifact> artifacts;
+	private Collection<Artifact> artifacts = null;
 
 	private File resolvedCapsuleProjectFile = null;
 
@@ -191,9 +185,9 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// print types
 		final StringBuilder typesString = new StringBuilder();
-		if (buildEmpty) typesString.append('[' + Type.empty.name() + ']');
-		if (buildThin) typesString.append('[' + Type.thin.name() + ']');
-		if (buildFat) typesString.append('[' + Type.fat.name() + ']');
+		if (buildEmpty) typesString.append('[').append(Type.empty.name()).append(']');
+		if (buildThin) typesString.append('[').append(Type.thin.name()).append(']');
+		if (buildFat) typesString.append('[').append(Type.fat.name()).append(']');
 		debug("Types: " + typesString.toString());
 
 		// if no capsule ver specified, find the latest one
@@ -203,7 +197,7 @@ public class CapsuleMojo extends AbstractMojo {
 			try {
 				final VersionRangeResult result = repoSystem.resolveVersionRange(repoSession, request);
 				// get the latest version that is not a snapshot
-				for (int i = result.getVersions().size()-1; i >= 0; i--) {
+				for (int i = result.getVersions().size() - 1; i >= 0; i--) {
 					final String currentVersion = result.getVersions().get(i).toString();
 					if (!currentVersion.contains("SNAPSHOT")) {
 						capsuleVersion = result.getVersions().get(i).toString();
@@ -226,9 +220,12 @@ public class CapsuleMojo extends AbstractMojo {
 		}
 
 		// build path if doesn't exist
-		if (!output.exists()) output.mkdirs();
+		if (!output.exists()) {
+			boolean success = output.mkdirs();
+			if (!success) throw new MojoFailureException("Failed to build output path");
+		}
 
-		info("Using Capsule Version: " + capsuleVersion.toString());
+		info("Using Capsule Version: " + capsuleVersion);
 		debug("Output Directory: " + output.toString());
 
 		try {
@@ -249,7 +246,7 @@ public class CapsuleMojo extends AbstractMojo {
 		final JarOutputStream jarStream = jar.value;
 
 		// add manifest (plus Application+Repositories)
-		final Map<String, String> additionalAttributes = new HashMap();
+		final Map<String, String> additionalAttributes = new HashMap<>();
 		additionalAttributes.put("Application", mavenProject.getGroupId() + ":" + mavenProject.getArtifactId() + ":" + mavenProject.getVersion());
 		additionalAttributes.put("Repositories", getRepoString());
 		addManifest(jarStream, additionalAttributes, Type.empty);
@@ -278,7 +275,7 @@ public class CapsuleMojo extends AbstractMojo {
 		final JarOutputStream jarStream = jar.value;
 
 		// add manifest (with Dependencies+Repositories list)
-		final Map<String, String> additionalAttributes = new HashMap();
+		final Map<String, String> additionalAttributes = new HashMap<>();
 		additionalAttributes.put("Dependencies", getDependencyString());
 		additionalAttributes.put("Repositories", getRepoString());
 		addManifest(jarStream, additionalAttributes, Type.thin);
@@ -353,11 +350,8 @@ public class CapsuleMojo extends AbstractMojo {
 		final Manifest manifestBuild = new Manifest();
 		final Attributes mainAttributes = manifestBuild.getMainAttributes();
 		mainAttributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-		mainAttributes.put(Attributes.Name.MAIN_CLASS, mainClass);
+		mainAttributes.put(Attributes.Name.MAIN_CLASS, DEFAULT_CAPSULE_NAME);
 		mainAttributes.put(new Attributes.Name("Application-Class"), this.appClass);
-
-
-
 		mainAttributes.put(new Attributes.Name("Application-Name"), this.getOutputName(type));
 
 		// add properties
@@ -373,7 +367,7 @@ public class CapsuleMojo extends AbstractMojo {
 					final StringBuilder argsList = new StringBuilder();
 					for (final Xpp3Dom arg : argsElements) {
 						if (arg != null && arg.getValue() != null)
-							argsList.append(arg.getValue().replace(" ", "") + " ");
+							argsList.append(arg.getValue().replace(" ", "")).append(" ");
 					}
 					mainAttributes.put(new Attributes.Name("JVM-Args"), argsList.toString());
 				}
@@ -410,7 +404,7 @@ public class CapsuleMojo extends AbstractMojo {
 						final StringBuilder modePropertiesList = new StringBuilder();
 						for (final Pair property : mode.properties)
 							if (property.key != null && property.value != null) {
-								modePropertiesList.append(property.key + "=" + property.value + " ");
+								modePropertiesList.append(property.key).append("=").append(property.value).append(" ");
 							}
 						if (modePropertiesList.length() > 0) modeAttributes.put(new Attributes.Name("System-Properties"), modePropertiesList.toString());
 					}
@@ -447,10 +441,9 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private void addCapletClasses(final JarOutputStream jarStream) throws IOException {
 		if (caplets != null && !caplets.isEmpty()) {
-			final File classesDir = new File(this.buildDir, "classes");
 			for (final Map.Entry<String, File> caplet : this.capletFiles.entrySet()) {
 				final String path = caplet.getValue().getPath();
-				addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(caplet.getValue()), jarStream);
+				addToJar(path.substring(path.indexOf("classes") + 8), new FileInputStream(caplet.getValue()), jarStream);
 			}
 		}
 	}
@@ -468,7 +461,7 @@ public class CapsuleMojo extends AbstractMojo {
 	private Map<String, byte[]> getAllCapsuleClasses() throws IOException {
 		final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsule()));
 
-		final Map<String, byte[]> otherClasses = new HashMap();
+		final Map<String, byte[]> otherClasses = new HashMap<>();
 		JarEntry entry;
 		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
 			if (entry.getName().contains("capsule") || entry.getName().equals(DEFAULT_CAPSULE_CLASS))
@@ -490,7 +483,7 @@ public class CapsuleMojo extends AbstractMojo {
 					continue;
 				}
 
-				String outputDirectory = updateOutputDirectory(jar, fileSet.outputDirectory);
+				final String outputDirectory = addDirectoryToJar(jar, fileSet.outputDirectory);
 
 				for (final String include : fileSet.includes) {
 					final FileInputStream fin = new FileInputStream(new File(directory, include));
@@ -503,20 +496,21 @@ public class CapsuleMojo extends AbstractMojo {
 	private void addDependencySets(final JarOutputStream jar) throws IOException {
 		if (dependencySets == null) return;
 
-		for (final DependencySet dependencySet : dependencySets ) {
-			for ( Artifact artifact : artifacts ) {
+		for (final DependencySet dependencySet : dependencySets) {
+			for (final Artifact artifact : artifacts) {
 				if (dependencySet.groupId.equals(artifact.getGroupId()) && dependencySet.artifactId.equals(artifact.getArtifactId())) {
-					if ( dependencySet.version == null || dependencySet.version.equals(artifact.getVersion()) ) {
+					if (dependencySet.version == null || dependencySet.version.equals(artifact.getVersion())) {
 						if (artifact.getFile() == null) {
 							warn("Could not resolve dependency: " + dependencySet.groupId + ":" + dependencySet.artifactId + ":" + dependencySet.version);
 							continue;
 						}
 
-						JarFile jarFile = new JarFile(artifact.getFile());
+						final JarFile jarFile = new JarFile(artifact.getFile());
 
-						String outputDirectory = updateOutputDirectory(jar, dependencySet.outputDirectory);
+						final String outputDirectory = addDirectoryToJar(jar, dependencySet.outputDirectory);
+
 						for (final String include : dependencySet.includes) {
-							ZipEntry entry = jarFile.getEntry(include);
+							final ZipEntry entry = jarFile.getEntry(include);
 							if (entry != null) {
 								info("Adding " + include + " from " + artifact.getFile());
 								addToJar(outputDirectory + include, jarFile.getInputStream(entry), jar);
@@ -530,15 +524,15 @@ public class CapsuleMojo extends AbstractMojo {
 		}
 	}
 
-	private String updateOutputDirectory(JarOutputStream jar, String outputDirectory) throws IOException {
-		if (outputDirectory != null && !outputDirectory.isEmpty()) {
-            if (!outputDirectory.endsWith("/")) outputDirectory += "/";
-            jar.putNextEntry(new ZipEntry(outputDirectory));
-            jar.closeEntry();
-        } else {
-            outputDirectory = "";
-        }
-		return outputDirectory;
+	private String addDirectoryToJar(final JarOutputStream jar, final String outputDirectory) throws IOException {
+		final String formattedOutputDirectory = formatDirectoryPath(outputDirectory);
+		if (!formattedOutputDirectory.isEmpty()) {
+			try {
+				jar.putNextEntry(new ZipEntry(formattedOutputDirectory));
+				jar.closeEntry();
+			} catch (final ZipException ignore) {} // ignore duplicate entries and other errors
+		}
+		return formattedOutputDirectory;
 	}
 
 	private JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
@@ -554,7 +548,7 @@ public class CapsuleMojo extends AbstractMojo {
 	private Pair<File, JarOutputStream> openJar(final Type type) throws IOException {
 		final File file = new File(this.output, getOutputName(type) + ".jar");
 		info("Created " + file.getName());
-		return new Pair(file, new JarOutputStream(new FileOutputStream(file)));
+		return new Pair<>(file, new JarOutputStream(new FileOutputStream(file)));
 	}
 
 	private File resolveCapsule() throws IOException {
@@ -583,9 +577,9 @@ public class CapsuleMojo extends AbstractMojo {
 			for (int i = 0; i < dependency.getExclusions().size(); i++) {
 				final Exclusion exclusion = dependency.getExclusions().get(i);
 				if (i > 0) exclusionsList.append(",");
-				exclusionsList.append(exclusion.getGroupId() + ":" + exclusion.getArtifactId());
+				exclusionsList.append(exclusion.getGroupId()).append(":").append(exclusion.getArtifactId());
 			}
-			coords.append("(" + exclusionsList.toString() + ")");
+			coords.append("(").append(exclusionsList.toString()).append(")");
 		}
 		return coords.toString();
 	}
@@ -593,7 +587,7 @@ public class CapsuleMojo extends AbstractMojo {
 	private String getRepoString() {
 		final StringBuilder repoList = new StringBuilder();
 		for (final RemoteRepository repository : this.remoteRepos)
-			repoList.append(repository.getId() + "(" + repository.getUrl() + ") ");
+			repoList.append(repository.getId()).append("(").append(repository.getUrl()).append(") ");
 		return repoList.toString();
 	}
 
@@ -601,7 +595,7 @@ public class CapsuleMojo extends AbstractMojo {
 		final StringBuilder dependenciesList = new StringBuilder();
 		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies())
 			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime"))
-				dependenciesList.append(getDependencyCoordsWithExclusions(dependency) + " ");
+				dependenciesList.append(getDependencyCoordsWithExclusions(dependency)).append(" ");
 		return dependenciesList.toString();
 	}
 
@@ -611,7 +605,7 @@ public class CapsuleMojo extends AbstractMojo {
 			propertiesList = new StringBuilder();
 			for (final Pair property : this.properties)
 				if (property.key != null && property.value != null)
-					propertiesList.append(property.key + "=" + property.value + " ");
+					propertiesList.append(property.key).append("=").append(property.value).append(" ");
 		} else if (execConfig != null) { // else try and find properties in the exec plugin
 			propertiesList = new StringBuilder();
 			final Xpp3Dom propertiesElement = execConfig.getChild("systemProperties");
@@ -622,7 +616,7 @@ public class CapsuleMojo extends AbstractMojo {
 						final Xpp3Dom key = propertyElement.getChild("key");
 						final Xpp3Dom value = propertyElement.getChild("value");
 						if (key != null && key.getValue() != null && value != null && value.getValue() != null)
-							propertiesList.append(key.getValue() + "=" + value.getValue() + " ");
+							propertiesList.append(key.getValue()).append("=").append(value.getValue()).append(" ");
 					}
 				}
 			}
@@ -631,7 +625,7 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private void createExecCopy(final File jar) throws IOException {
-		if (this.chmod.equals("true") || this.chmod.equals("1") || this.buildExec.equals("true") || this.buildExec.equals("1"))
+		if (this.chmod.equals("true") || this.chmod.equals("1"))
 			createExecCopyProcess(jar, EXEC_PREFIX, ".x");
 		if (this.trampoline.equals("true") || this.trampoline.equals("1"))
 			createExecCopyProcess(jar, EXEC_TRAMPOLINE_PREFIX, ".tx");
@@ -673,15 +667,10 @@ public class CapsuleMojo extends AbstractMojo {
 		}
 	}
 
-	private static final Pair pull(final Pair[] pairs, final Object key) {
-		for (final Pair pair : pairs) if (pair.key.equals(key)) return pair;
-		return null;
-	}
-
 	public static class Mode {
-		private String name;
-		private Pair<String, String>[] properties;
-		private Pair<String, String>[] manifest;
+		private String name = null;
+		private Pair<String, String>[] properties = null;
+		private Pair<String, String>[] manifest = null;
 	}
 
 	public static class DependencySet {
@@ -696,6 +685,18 @@ public class CapsuleMojo extends AbstractMojo {
 		public String directory;
 		public String outputDirectory;
 		public String[] includes;
+	}
+
+	private String formatDirectoryPath(final String directoryPath) {
+		if (directoryPath != null && !directoryPath.isEmpty()) {
+			if (!directoryPath.endsWith("/")) {
+				return directoryPath + File.separatorChar;
+			} else {
+				return directoryPath;
+			}
+		} else {
+			return "";
+		}
 	}
 
 	private void printManifest(final Manifest manifest) {
