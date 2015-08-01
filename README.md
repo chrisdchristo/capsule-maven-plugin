@@ -49,12 +49,12 @@ Please note that the `package` command must have been executed before the `capsu
 
 The only requirement is to have the `<appClass>` attribute in the configuration. This is the class of your app that contains the main method which will be fired on startup. You must include the package path along with the class name (`hello` is the package and `HelloWorld` is the class name above).
 
-## Capsule goals
+## Capsule Goals
 
 This plugin defines two goals:
 
-* `build`: Builds the capsules (i.e packages your app into a capsule and dumps them into the target directory).
-* `install`: Installs the capsules into your maven repo. (It will also build the capsules if haven't already)
+* `build`: Builds the capsules (i.e packages your app into a capsule and dumps them into the build directory).
+* `install`: Installs the capsules into your maven repo (will also build the capsules if haven't already).
 
 Both require the package phase to have been run beforehand.
 
@@ -346,7 +346,7 @@ You specify a number of `<dependencySet>` which must contain the GAV of a projec
 
 ## Custom Capsule Version
 
-Ths plugin can support older versions of capsule (at your own risk). You can specify a maven property for the capsule version (This will be the version of capsule to package within the build of the capsules).
+Ths plugin can support older versions of capsule (at your own risk). You can specify a maven property for the capsule version (this will be the version of capsule to package within the build of the capsules).
 
 ```
 <properties>
