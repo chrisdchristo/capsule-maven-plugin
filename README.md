@@ -49,15 +49,6 @@ Please note that the `package` command must have been executed before the `capsu
 
 The only requirement is to have the `<appClass>` attribute in the configuration. This is the class of your app that contains the main method which will be fired on startup. You must include the package path along with the class name (`hello` is the package and `HelloWorld` is the class name above).
 
-## Capsule Goals
-
-This plugin defines two goals:
-
-* `build`: Builds the capsules (i.e packages your app into a capsule and dumps them into the build directory).
-* `install`: Installs the capsules into your maven repo (will also build the capsules if haven't already).
-
-Both require the package phase to have been run beforehand.
-
 ## Building Automatically
 
 It is recommended to have an execution setup to build the capsules, thus eliminating you to run an additional maven command to build them.
@@ -71,7 +62,6 @@ It is recommended to have an execution setup to build the capsules, thus elimina
 		<execution>
 			<goals>
 				<goal>build</goal>
-				<goal>install</goal>
 			</goals>
 			<configuration>
 				<appClass>hello.HelloWorld</appClass>
@@ -81,12 +71,9 @@ It is recommended to have an execution setup to build the capsules, thus elimina
 </plugin>
 ```
 
-* By default the `build` goal runs during the package phase.
-* By default the `install` goal runs during the install phase.
+By default the `build` goal runs during the package phase.
 
 So now if you were to run simply `mvn package` then the build goal will execute which will build the capsules into your build directory.
-
-If you were to run the `mvn install` command then the `build` goal would run during the package phase and the `install` goal would run at the install phase. Or in other words it will build (into your target) and install (into your repo) the capsules.
 
 Or alternatively you could use the `maven-exec-plugin` to run your app (as you develop), and then only build the capsule(s) when you want to deploy to a server. This plugin integrates nicely with the `maven-exec-plugin`, [see here](https://github.com/chrischristo/capsule-maven-plugin#maven-exec-plugin-integration).
 
@@ -588,7 +575,6 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<execution>
 			<goals>
 				<goal>build</goal>
-				<goal>install</goal>
 			</goals>
 		</execution>
 	</executions>

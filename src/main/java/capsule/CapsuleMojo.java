@@ -10,7 +10,9 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.DefaultMavenProjectHelper;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectHelper;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.eclipse.aether.RepositorySystem;
@@ -116,6 +118,8 @@ public abstract class CapsuleMojo extends AbstractMojo {
 	protected File resolvedCapsuleProjectFile = null;
 
 	protected boolean buildEmpty = true, buildThin = true, buildFat = true;
+
+	final MavenProjectHelper helper = new DefaultMavenProjectHelper();
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -229,8 +233,6 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		info("Using Capsule Version: " + capsuleVersion);
 		debug("Output Directory: " + output.toString());
 
-
-
 	}
 
 	/**
@@ -267,8 +269,10 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		}
 
 		final List<File> jars = createExecCopy(jarFile);
-
 		jars.add(jarFile);
+
+		attachArtifact(Type.empty, jarFile);
+
 		return jars;
 	}
 
@@ -311,6 +315,9 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		final List<File> jars = createExecCopy(jarFile);
 
 		jars.add(jarFile);
+
+		attachArtifact(Type.thin, jarFile);
+
 		return jars;
 	}
 
@@ -364,6 +371,9 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		final List<File> jars = createExecCopy(jarFile);
 
 		jars.add(jarFile);
+
+		attachArtifact(Type.fat, jarFile);
+
 		return jars;
 	}
 
@@ -680,6 +690,11 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			info(x.getName());
 			return x;
 		}
+	}
+
+	protected void attachArtifact(final Type type, final File file) {
+		debug("Attached Artifact capsule-" + type);
+		helper.attachArtifact(mavenProject, file, "capsule-" + type);
 	}
 
 	protected String getOutputName(final Type type) {
