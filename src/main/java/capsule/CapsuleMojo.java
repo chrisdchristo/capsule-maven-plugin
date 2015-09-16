@@ -402,6 +402,7 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		mainAttributes.put(Attributes.Name.MAIN_CLASS, DEFAULT_CAPSULE_NAME);
 		mainAttributes.put(new Attributes.Name("Application-Class"), this.appClass);
 		mainAttributes.put(new Attributes.Name("Application-Name"), this.getOutputName(type));
+		mainAttributes.put(new Attributes.Name("Premain-Class"), DEFAULT_CAPSULE_NAME);
 
 		// add properties
 		final String propertiesString = getSystemPropertiesString();
