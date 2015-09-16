@@ -253,6 +253,7 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			// add manifest (plus Application+Repositories)
 			final Map<String, String> additionalAttributes = new HashMap<>();
 			additionalAttributes.put("Application", mavenProject.getGroupId() + ":" + mavenProject.getArtifactId() + ":" + mavenProject.getVersion());
+			additionalAttributes.put("Dependencies", getDependencyString());
 			additionalAttributes.put("Repositories", getRepoString());
 			additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet
 			addManifest(jarStream, additionalAttributes, Type.empty);
@@ -299,7 +300,6 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			final Map<String, String> additionalAttributes = new HashMap<>();
 			additionalAttributes.put("Dependencies", getDependencyString());
 			additionalAttributes.put("Repositories", getRepoString());
-			additionalAttributes.put("Repositories", this.caplets);
 			additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet
 			addManifest(jarStream, additionalAttributes, Type.thin);
 
@@ -346,7 +346,14 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			info(jarFile.getName());
 
 			// add manifest
-			addManifest(jarStream, null, Type.fat);
+			final Map<String, String> additionalAttributes = new HashMap<>();
+
+			// if there are provided scoped dependencies then capsule we need to download them at runtime
+			if (hasProvidedScopeDependency()) {
+				additionalAttributes.put("Dependencies", getProvidedScopedDependencyString());
+				additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet
+			}
+			addManifest(jarStream, additionalAttributes, Type.fat);
 
 			// add main jar
 			try {
@@ -369,6 +376,13 @@ public abstract class CapsuleMojo extends AbstractMojo {
 
 			// add Capsule.class
 			addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
+
+			// add CapsuleMaven classes
+			if (hasProvidedScopeDependency()) { // need maven if we need to download some provided dependencies at runtime
+				final Map<String, byte[]> otherCapsuleClasses = getAllCapsuleMavenClasses();
+				for (final Map.Entry<String, byte[]> entry : otherCapsuleClasses.entrySet())
+					addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
+			}
 
 			// add custom capsule class (if exists)
 			addCapletClasses(jarStream);
@@ -668,9 +682,25 @@ public abstract class CapsuleMojo extends AbstractMojo {
 	protected String getDependencyString() {
 		final StringBuilder dependenciesList = new StringBuilder();
 		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies())
-			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime"))
+			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime") || dependency.getScope().equals("provided"))
+				if (!(dependency.getGroupId().equalsIgnoreCase(CAPSULE_GROUP) && dependency.getArtifactId().equalsIgnoreCase(DEFAULT_CAPSULE_NAME))) // ignore the capsule lib as we already add this
+					dependenciesList.append(getDependencyCoordsWithExclusions(dependency)).append(" ");
+		return dependenciesList.toString();
+	}
+
+	protected String getProvidedScopedDependencyString() {
+		final StringBuilder dependenciesList = new StringBuilder();
+		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies())
+			if (dependency.getScope().equals("provided"))
 				dependenciesList.append(getDependencyCoordsWithExclusions(dependency)).append(" ");
 		return dependenciesList.toString();
+	}
+
+	protected boolean hasProvidedScopeDependency() {
+		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies())
+			if (dependency.getScope().equals("provided"))
+				return true;
+		return false;
 	}
 
 	protected String getSystemPropertiesString() {
