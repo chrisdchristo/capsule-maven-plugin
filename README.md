@@ -110,12 +110,14 @@ It might be wanted to have something in between a thin and a fat jar where only 
 
 This can be done by building a fat jar and just excluding the dependencies you don't want. This is as simple as setting the scope to ```provided``` on the dependency in the pom.xml like so:
 
+```
 <dependency>
 	<groupId>com.google.guava</groupId>
 	<artifactId>guava</artifactId>
 	<version>17.0</version>
 	<scope>provided</scope>
 </dependency>
+```
 
 For the fat jar, the plugin only embeds dependencies that are scoped ```compile``` or ```runtime```, so any other scoped dependency will not be included (such as ```provided```).
 
