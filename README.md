@@ -119,7 +119,9 @@ This can be done by building a fat jar and just excluding the dependencies you d
 </dependency>
 ```
 
-For the fat jar, the plugin only embeds dependencies that are scoped ```compile``` or ```runtime```, so any other scoped dependency will not be included (such as ```provided```).
+For the fat jar, the plugin only embeds dependencies that are scoped ```compile``` or ```runtime```, so any other scoped dependency will not be embedded (such as ```provided```).
+Capsule will download the rest at runtime.
+
 
 
 ## Really Executable Capsules (Mac/Linux only)
