@@ -39,6 +39,8 @@ public abstract class CapsuleMojo extends AbstractMojo {
 	public static final String CAPSULE_GROUP = "co.paralleluniverse";
 	public static final String DEFAULT_CAPSULE_NAME = "Capsule";
 	public static final String DEFAULT_CAPSULE_CLASS = DEFAULT_CAPSULE_NAME + ".class";
+	public static final String DEFAULT_CAPSULE_MAVEN_NAME = "MavenCapsule";
+	public static final String DEFAULT_CAPSULE_MAVEN_CLASS =  "MavenCapsule.class";
 
 	public static final String EXEC_PREFIX = "#!/bin/sh\n\nexec java -jar \"$0\" \"$@\"\n\n";
 	public static final String EXEC_TRAMPOLINE_PREFIX = "#!/bin/sh\n\nexec java -Dcapsule.trampoline -jar \"$0\" \"$@\"\n\n";
@@ -116,6 +118,7 @@ public abstract class CapsuleMojo extends AbstractMojo {
 	protected Collection<Artifact> artifacts = null;
 
 	protected File resolvedCapsuleProjectFile = null;
+	protected File resolvedCapsuleMavenProjectFile = null;
 
 	protected boolean buildEmpty = true, buildThin = true, buildFat = true;
 
@@ -150,8 +153,10 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		if (appClass == null)
 			throw new MojoFailureException(LOG_PREFIX + " appClass not set (or could not be obtained from the exec plugin mainClass)");
 
+		if (this.caplets == null) this.caplets = "";
+
 		// check for caplets existence
-		if (caplets != null && !caplets.isEmpty()) {
+		if (!caplets.isEmpty()) {
 			final StringBuilder capletString = new StringBuilder();
 			final File classesDir = new File(this.buildDir, "classes");
 			for (final String caplet : this.caplets.split(" ")) {
@@ -249,10 +254,14 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			final Map<String, String> additionalAttributes = new HashMap<>();
 			additionalAttributes.put("Application", mavenProject.getGroupId() + ":" + mavenProject.getArtifactId() + ":" + mavenProject.getVersion());
 			additionalAttributes.put("Repositories", getRepoString());
+			additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet
 			addManifest(jarStream, additionalAttributes, Type.empty);
 
-			// add Capsule classes
-			final Map<String, byte[]> otherCapsuleClasses = getAllCapsuleClasses();
+			// add Capsule.class
+			addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
+
+			// add CapsuleMaven classes
+			final Map<String, byte[]> otherCapsuleClasses = getAllCapsuleMavenClasses();
 			for (final Map.Entry<String, byte[]> entry : otherCapsuleClasses.entrySet())
 				addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
@@ -290,13 +299,18 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			final Map<String, String> additionalAttributes = new HashMap<>();
 			additionalAttributes.put("Dependencies", getDependencyString());
 			additionalAttributes.put("Repositories", getRepoString());
+			additionalAttributes.put("Repositories", this.caplets);
+			additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet
 			addManifest(jarStream, additionalAttributes, Type.thin);
 
 			// add compiled project classes
 			addCompiledProjectClasses(jarStream);
 
-			// add Capsule classes
-			final Map<String, byte[]> capsuleClasses = getAllCapsuleClasses();
+			// add Capsule.class
+			addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
+
+			// add CapsuleMaven classes
+			final Map<String, byte[]> capsuleClasses = getAllCapsuleMavenClasses();
 			for (final Map.Entry<String, byte[]> entry : capsuleClasses.entrySet())
 				addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
 
@@ -409,14 +423,14 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			}
 		}
 
+		// caplets
+		if (this.caplets != null && !this.caplets.isEmpty())
+			mainAttributes.put(new Attributes.Name("Caplets"), this.caplets);
+
 		// additional attributes
 		if (additionalAttributes != null)
 			for (final Map.Entry<String, String> entry : additionalAttributes.entrySet())
 				mainAttributes.put(new Attributes.Name(entry.getKey()), entry.getValue());
-
-		// caplets
-		if (this.caplets != null && !this.caplets.isEmpty())
-			mainAttributes.put(new Attributes.Name("Caplets"), this.caplets);
 
 		// custom user defined manifest entries (will override any before)
 		if (this.manifest != null)
@@ -493,13 +507,25 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		return null;
 	}
 
-	protected Map<String, byte[]> getAllCapsuleClasses() throws IOException {
-		final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsule()));
+//	protected Map<String, byte[]> getAllCapsuleClasses() throws IOException {
+//		final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsule()));
+//
+//		final Map<String, byte[]> otherClasses = new HashMap<>();
+//		JarEntry entry;
+//		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
+//			if (entry.getName().contains("capsule") || entry.getName().equals(DEFAULT_CAPSULE_CLASS))
+//				otherClasses.put(entry.getName(), IOUtil.toByteArray(capsuleJarInputStream));
+//
+//		return otherClasses;
+//	}
+
+	protected Map<String, byte[]> getAllCapsuleMavenClasses() throws IOException {
+		final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsuleMaven()));
 
 		final Map<String, byte[]> otherClasses = new HashMap<>();
 		JarEntry entry;
 		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
-			if (entry.getName().contains("capsule") || entry.getName().equals(DEFAULT_CAPSULE_CLASS))
+			if (entry.getName().contains("capsule") || entry.getName().equals(DEFAULT_CAPSULE_MAVEN_CLASS))
 				otherClasses.put(entry.getName(), IOUtil.toByteArray(capsuleJarInputStream));
 
 		return otherClasses;
@@ -596,6 +622,19 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			this.resolvedCapsuleProjectFile = artifactResult.getArtifact().getFile();
 		}
 		return this.resolvedCapsuleProjectFile;
+	}
+
+	protected File resolveCapsuleMaven() throws IOException {
+		if (this.resolvedCapsuleMavenProjectFile == null) {
+			final ArtifactResult artifactResult;
+			try {
+				artifactResult = this.resolve(CAPSULE_GROUP, "capsule-maven", capsuleVersion);
+			} catch (final ArtifactResolutionException e) {
+				throw new IOException("CapsuleMaven not found from repos");
+			}
+			this.resolvedCapsuleMavenProjectFile = artifactResult.getArtifact().getFile();
+		}
+		return this.resolvedCapsuleMavenProjectFile;
 	}
 
 	protected ArtifactResult resolve(final String groupId, final String artifactId, final String version) throws ArtifactResolutionException {
