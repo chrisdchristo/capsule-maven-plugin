@@ -106,7 +106,7 @@ If you only want a specific capsule type to be built, you can add the `<types>` 
 
 ## Excluding dependencies in the fat jar
 
-It might be wanted to have something in between a thin and a fat jar where only certain dependencies are included in the built capsule (and the others resolved at runtime).
+Perhaps something between a thin and a fat jar is desired, where only certain dependencies are included in the built capsule (and the others resolved at runtime).
 
 This can be done by building a fat jar and just excluding the dependencies you don't want. This is as simple as setting the scope to ```provided``` on the dependency in the pom.xml like so:
 
