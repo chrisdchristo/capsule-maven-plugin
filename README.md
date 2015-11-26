@@ -381,7 +381,7 @@ See more info on [caplets](https://github.com/puniverse/capsule#caplets).
 
 ## Maven Exec Plugin Integration
 
-The [maven exec plugin](http://mojo.codehaus.org/exec-maven-plugin/) is a useful tool to run your jar all from within maven (using its classpath).
+The [maven exec plugin](http://www.mojohaus.org/exec-maven-plugin/) is a useful tool to run your jar all from within maven (using its classpath).
 
 ```
 <plugin>
