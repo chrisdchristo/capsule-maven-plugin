@@ -130,7 +130,7 @@ Capsule will download the rest at runtime.
 
 ## Excluding Transitive dependencies in the fat jar
 
-By default the plugin will embed the dependencies and their transitive dependencies to that the jar can run without needing to download anything.
+By default, the plugin will embed the dependencies and their transitive dependencies, so that the jar can run without needing to download anything.
 
 However if transitive dependencies are not desired then this can be turned off. Simply set the configuration property `transitive` to false:
 
