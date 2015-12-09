@@ -36,6 +36,8 @@ public abstract class CapsuleMojo extends AbstractMojo {
 
 	public String LOG_PREFIX = "[Capsule] ";
 
+	public static final String DEFAULT_CAPSULE_VERSION = "1.0";
+
 	public static final String CAPSULE_GROUP = "co.paralleluniverse";
 	public static final String DEFAULT_CAPSULE_NAME = "Capsule";
 	public static final String DEFAULT_CAPSULE_CLASS = DEFAULT_CAPSULE_NAME + ".class";
@@ -76,7 +78,7 @@ public abstract class CapsuleMojo extends AbstractMojo {
 	@Parameter(property = "capsule.appClass")
 	protected String appClass = null;
 	@Parameter(property = "capsule.version")
-	protected String capsuleVersion = null;
+	protected String capsuleVersion = DEFAULT_CAPSULE_VERSION;
 	@Parameter(property = "capsule.output", defaultValue = "${project.build.directory}")
 	protected File output = null;
 	@Parameter(property = "capsule.customDescriptorEmpty", defaultValue = "-capsule-empty")
@@ -91,6 +93,8 @@ public abstract class CapsuleMojo extends AbstractMojo {
 	protected String trampoline = null;
 	@Parameter(property = "capsule.types")
 	protected String types = null;
+	@Parameter(property = "capsule.transitive")
+	protected Boolean transitive = true;
 	@Parameter(property = "capsule.caplets")
 	protected String caplets;
 	@Parameter(property = "capsule.execPluginConfig")
@@ -366,11 +370,24 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			}
 
 			// add dependencies
-			for (final Artifact artifact : artifacts) {
-				if (artifact.getFile() == null) {
-					warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
-				} else {
-					addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
+			if (transitive) {
+				for (final Artifact artifact : artifacts) {
+					if (artifact.getFile() == null) {
+						warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
+					} else {
+						warn("adding - " + artifact.getFile().getName());
+						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
+					}
+				}
+			} else {
+				for (final Object dep : mavenProject.getDependencyArtifacts()) {
+					final Artifact artifact = (Artifact) dep;
+					if (artifact.getFile() == null) {
+						warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
+					} else {
+						warn("adding - " + artifact.getFile().getName());
+						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
+					}
 				}
 			}
 
@@ -433,7 +450,7 @@ public abstract class CapsuleMojo extends AbstractMojo {
 						if (arg != null && arg.getValue() != null)
 							argsList.append(arg.getValue().replace(" ", "")).append(" ");
 					}
-					mainAttributes.put(new Attributes.Name("JVM-Args"), argsList.toString());
+					mainAttributes.put(new Attributes.Name("Args"), argsList.toString());
 				}
 			}
 		}
@@ -621,10 +638,10 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		return jar;
 	}
 
-	protected Pair<File, JarOutputStream> openJar(final Type type) throws IOException {
-		final File file = new File(this.output, getOutputName(type) + ".jar");
-		return new Pair<>(file, new JarOutputStream(new FileOutputStream(file)));
-	}
+//	protected Pair<File, JarOutputStream> openJar(final Type type) throws IOException {
+//		final File file = new File(this.output, getOutputName(type) + ".jar");
+//		return new Pair<>(file, new JarOutputStream(new FileOutputStream(file)));
+//	}
 
 	protected File resolveCapsule() throws IOException {
 		if (this.resolvedCapsuleProjectFile == null) {
@@ -707,9 +724,14 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		StringBuilder propertiesList = null;
 		if (this.properties != null) {
 			propertiesList = new StringBuilder();
-			for (final Pair property : this.properties)
-				if (property.key != null && property.value != null)
-					propertiesList.append(property.key).append("=").append(property.value).append(" ");
+			for (final Pair property : this.properties) {
+				if (property.key != null) {
+					propertiesList.append(property.key);
+					if (property.value != null && (property.value instanceof String && !((String) property.value).isEmpty()))
+						propertiesList.append("=").append(property.value);
+					propertiesList.append(" ");
+				}
+			}
 		} else if (execConfig != null) { // else try and find properties in the exec plugin
 			propertiesList = new StringBuilder();
 			final Xpp3Dom propertiesElement = execConfig.getChild("systemProperties");
@@ -719,8 +741,12 @@ public abstract class CapsuleMojo extends AbstractMojo {
 					for (final Xpp3Dom propertyElement : propertiesElements) {
 						final Xpp3Dom key = propertyElement.getChild("key");
 						final Xpp3Dom value = propertyElement.getChild("value");
-						if (key != null && key.getValue() != null && value != null && value.getValue() != null)
-							propertiesList.append(key.getValue()).append("=").append(value.getValue()).append(" ");
+						if (key != null && key.getValue() != null) {
+							propertiesList.append(key.getValue()).append("=");
+							if (value != null && value.getValue() != null && !value.getValue().isEmpty())
+								propertiesList.append("=").append(value.getValue());
+							propertiesList.append(" ");
+						}
 					}
 				}
 			}
@@ -729,7 +755,7 @@ public abstract class CapsuleMojo extends AbstractMojo {
 	}
 
 	protected List<File> createExecCopy(final File jar) throws IOException {
-		final List<File> jars = new ArrayList<File>();
+		final List<File> jars = new ArrayList<>();
 		if (this.chmod.equals("true") || this.chmod.equals("1"))
 			jars.add(createExecCopyProcess(jar, EXEC_PREFIX, ".x"));
 		if (this.trampoline.equals("true") || this.trampoline.equals("1"))
@@ -758,8 +784,8 @@ public abstract class CapsuleMojo extends AbstractMojo {
 			IOUtil.close(in);
 			IOUtil.close(out);
 			info(x.getName());
-			return x;
 		}
+		return x;
 	}
 
 	protected void attachArtifact(final Type type, final File file) {
@@ -830,10 +856,10 @@ public abstract class CapsuleMojo extends AbstractMojo {
 		}
 	}
 
-	protected String installPath() {
-		return repoSession.getLocalRepository().getBasedir().toString() + File.separatorChar + mavenProject.getGroupId().replace('.', '/') + File
-			.separatorChar + mavenProject.getName() + File.separatorChar + mavenProject.getVersion() + File.separatorChar;
-	}
+//	protected String installPath() {
+//		return repoSession.getLocalRepository().getBasedir().toString() + File.separatorChar + mavenProject.getGroupId().replace('.', '/') + File
+//			.separatorChar + mavenProject.getName() + File.separatorChar + mavenProject.getVersion() + File.separatorChar;
+//	}
 
 	protected void debug(final String message) { getLog().debug(LOG_PREFIX + message); }
 	protected void info(final String message) { getLog().info(LOG_PREFIX + message); }

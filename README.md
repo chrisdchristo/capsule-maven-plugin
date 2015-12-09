@@ -13,7 +13,7 @@ A pro? [Skip to the plugin reference](https://github.com/chrischristo/capsule-ma
 
 Requires java version 1.7+ and maven 3.1.x+
 
-Supports [Capsule v1.0.0](https://github.com/puniverse/capsule/releases/tag/v1.0.0) and below.
+Supports [Capsule v1.0](https://github.com/puniverse/capsule/releases/tag/v1.0.0) and below (It may also support new versions of Capsules, but use at your own risk).
 
 #### Building from source
 Clone the project and run a maven install:
@@ -50,6 +50,10 @@ mvn package capsule:build
 Please note that the `package` command must have been executed before the `capsule:build` command can be run.
 
 The only requirement is to have the `<appClass>` attribute in the configuration. This is the class of your app that contains the main method which will be fired on startup. You must include the package path along with the class name (`hello` is the package and `HelloWorld` is the class name above).
+
+It is recommended to have specified the `capsule.version` property in your pom so that the capsule plugin knows which version of capsule to use.
+If none is specified, the default version of Capsule will be used as specified at the top of the readme (which may not be the latest).
+
 
 ## Building Automatically
 
@@ -124,7 +128,18 @@ This can be done by building a fat jar and just excluding the dependencies you d
 For the fat jar, the plugin only embeds dependencies that are scoped ```compile``` or ```runtime```, so any other scoped dependency will not be embedded (such as ```provided```).
 Capsule will download the rest at runtime.
 
+## Excluding Transitive dependencies in the fat jar
 
+By default the plugin will embed the dependencies and their transitive dependencies to that the jar can run without needing to download anything.
+
+However if transitive dependencies are not desired then this can be turned off. Simply set the configuration property `transitive` to false:
+
+```
+<configuration>
+	<appClass>hello.HelloWorld</appClass>
+	<transitive>false</transitive>
+</configuration>
+```
 
 ## Really Executable Capsules (Mac/Linux only)
 
@@ -355,14 +370,14 @@ You specify a number of `<dependencySet>` which must contain the GAV of a projec
 
 ## Custom Capsule Version
 
-Ths plugin can support older versions of capsule (at your own risk). You can specify a maven property for the capsule version (this will be the version of capsule to package within the build of the capsules).
+Ths plugin can support older or newer versions of capsule (at your own risk). You can specify a maven property for the capsule version (this will be the version of capsule to package within the build of the capsules).
 
 ```
 <properties>
 	<capsule.version>0.6.0</capsule.version>
 </properties>
 ```
-Otherwise, the latest version of capsule will be used automatically. This is recommended.
+Otherwise, the default version of capsule will be used automatically. This is recommended.
 
 ## Caplets
 
@@ -505,6 +520,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<output> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
+* `<transitive> (Optional)`: Specify whether transitive dependencies should also be embedded. Only applicable for `fat` capsules, and the default is true.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule#reference) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
@@ -528,6 +544,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<!-- <chmod>true</chmod> -->
 		<!-- <trampoline>true</trampoline> -->
 		<!-- <types>thin fat</types> -->
+		<!-- <transitive>true</transitive>
 		<!-- <execPluginConfig>root</execPluginConfig> -->
 		<!-- <caplets>MyCapsule MyCapsule2</caplets> -->
 		<!-- <customDescriptorEmpty>-cap-empty</customDescriptorEmpty> -->

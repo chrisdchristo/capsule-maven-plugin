@@ -3,7 +3,7 @@
 
 	<groupId>com.github.chrischristo</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
-	<version>0.10.9-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
 	<parent>
@@ -52,16 +52,17 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.version>1.7</java.version>
 
-		<maven.compiler.plugin.version>3.1</maven.compiler.plugin.version>
-		<maven.source.plugin.version>2.3</maven.source.plugin.version>
-		<maven.javadoc.plugin.version>2.9.1</maven.javadoc.plugin.version>
-		<maven.assembly.plugin.version>2.4.1</maven.assembly.plugin.version>
-		<maven.gpg.plugin.version>1.5</maven.gpg.plugin.version>
+		<maven.source.plugin.version>2.4</maven.source.plugin.version>
+
+		<maven.compiler.plugin.version>3.3</maven.compiler.plugin.version>
 		<maven.project.version>3.0-alpha-2</maven.project.version>
-		<maven.plugin.plugin.version>3.3</maven.plugin.plugin.version>
-		<maven.plugin.api.version>3.2.2</maven.plugin.api.version>
-		<maven.plugin.annotations.version>3.2</maven.plugin.annotations.version>
-		<aether.version>1.0.0.v20140518</aether.version>
+		<maven.plugin.plugin.version>3.4</maven.plugin.plugin.version>
+		<maven.plugin.api.version>3.3.9</maven.plugin.api.version>
+		<maven.plugin.annotations.version>3.4</maven.plugin.annotations.version>
+
+		<maven.gpg.plugin.version>1.6</maven.gpg.plugin.version>
+
+		<aether.version>1.0.2.v20150114</aether.version>
 	</properties>
 
 	<dependencies>
@@ -97,17 +98,6 @@
 	<build>
 		<plugins>
 
-			<!-- COMPILER -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${maven.compiler.plugin.version}</version>
-				<configuration>
-					<source>${java.version}</source>
-					<target>${java.version}</target>
-				</configuration>
-			</plugin>
-
 			<!-- SOURCES JAR -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -121,6 +111,17 @@
 						</goals>
 					</execution>
 				</executions>
+			</plugin>
+
+			<!-- COMPILER -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin.version}</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+				</configuration>
 			</plugin>
 
 			<!-- MAVEN MOJO -->
