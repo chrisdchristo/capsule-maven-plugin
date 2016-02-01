@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.0.0-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.0.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.0.1-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.0.1-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
@@ -13,7 +13,7 @@ A pro? [Skip to the plugin reference](https://github.com/chrischristo/capsule-ma
 
 Requires java version 1.7+ and maven 3.1.x+
 
-Supports [Capsule v1.0](https://github.com/puniverse/capsule/releases/tag/v1.0.0) and below (It may also support new versions of Capsules, but use at your own risk).
+Supports [Capsule v1.0](https://github.com/puniverse/capsule/releases/tag/v1.0.1) and below (It may also support new versions of Capsules, but use at your own risk).
 
 #### Building from source
 Clone the project and run a maven install:

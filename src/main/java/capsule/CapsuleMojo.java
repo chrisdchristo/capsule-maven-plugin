@@ -94,7 +94,7 @@ public abstract class CapsuleMojo extends AbstractMojo {
 	@Parameter(property = "capsule.types")
 	protected String types = null;
 	@Parameter(property = "capsule.transitive")
-	protected Boolean transitive = true;
+	protected Boolean transitive = true; // whether or not to include transitive dependencies for fat jar
 	@Parameter(property = "capsule.caplets")
 	protected String caplets;
 	@Parameter(property = "capsule.execPluginConfig")
@@ -375,7 +375,7 @@ public abstract class CapsuleMojo extends AbstractMojo {
 					if (artifact.getFile() == null) {
 						warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
 					} else {
-						warn("adding - " + artifact.getFile().getName());
+						debug("(Transitive) adding - " + artifact.getFile().getName());
 						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
 					}
 				}
@@ -384,8 +384,10 @@ public abstract class CapsuleMojo extends AbstractMojo {
 					final Artifact artifact = (Artifact) dep;
 					if (artifact.getFile() == null) {
 						warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
+					} else if (!(artifact.getScope().equals("compile") || artifact.getScope().equals("runtime"))) {
+						warn("Dependency[" + artifact + "] skipped, as its not compile or runtime scope (" + artifact.getScope() + ")");
 					} else {
-						warn("adding - " + artifact.getFile().getName());
+						debug("adding - " + artifact.getFile().getName());
 						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
 					}
 				}
