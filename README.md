@@ -13,7 +13,7 @@ A pro? [Skip to the plugin reference](https://github.com/chrischristo/capsule-ma
 
 Requires java version 1.7+ and maven 3.1.x+
 
-Supports [Capsule v1.0](https://github.com/puniverse/capsule/releases/tag/v1.0.1) and below (It may also support new versions of Capsules, but use at your own risk).
+Supports [Capsule v1.0.1](https://github.com/puniverse/capsule/releases/tag/v1.0.1) and below (It may also support new versions of Capsules, but use at your own risk).
 
 #### Building from source
 Clone the project and run a maven install:
