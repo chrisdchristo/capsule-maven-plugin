@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.0.1-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.0.1-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.0.2-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.0.2-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
@@ -187,7 +187,7 @@ sh target/my-app-1.0-capsule-fat.x
 
 ##### Trampoline
 
-When a capsule is launched, two processes are involved: first, a JVM process runs the capsule launcher, which then starts up a second, child process that runs the actual application. The two processes are linked so that killing or suspending one, will do the same for the other. While this model works well enough in most scenarios, sometimes it is desirable to directly launch the process running the application, rather than indirectly. This is supported by "capsule trampoline". [See more here at capsule](https://github.com/puniverse/capsule#the-capsule-execution-process).
+When a capsule is launched, two processes are involved: first, a JVM process runs the capsule launcher, which then starts up a second, child process that runs the actual application. The two processes are linked so that killing or suspending one, will do the same for the other. While this model works well enough in most scenarios, sometimes it is desirable to directly launch the process running the application, rather than indirectly. This is supported by "capsule trampoline". [See more here at capsule](http://www.capsule.io/user-guide/#the-capsule-execution-process).
 
 Essentially the concept defines that that when you execute the built Capsule jar, it will simply just output (in text) the full command needed to run the app (this will be a long command with all jvm and classpath args defined). The idea is then to just copy/paste the command and execute it raw.
 
@@ -250,7 +250,7 @@ public class HelloWorld {
 
 ## Additional Manifest Entries
 
-Capsule supports a number of manifest entries to configure your app to your heart's content. See the full reference [here](https://github.com/puniverse/capsule#manifest-attributes).
+Capsule supports a number of manifest entries to configure your app to your heart's content. See the full reference [here](http://www.capsule.io/reference/#manifest-attributes).
 
 So for e.g if you would like to set the `JVM-Args`:
 
@@ -306,7 +306,7 @@ Note by default the descriptor tags are `-capsule-empty`, `-capsule-thing` and `
 
 Capsule supports the concept of modes, which essentially means defining your app jar into different ways depending on certain characteristics.
 You define different modes for your app by setting specific manifest and/or system properties for each mode. So for e.g you could have a test mode which will define a test database connection, and likewise a production mode which will define a production database connection.
-You can then easily run your capsule in a specific mode by adding the `-Dcapsule.mode=MODE` argument at the command line. See more at [capsule modes](https://github.com/puniverse/capsule#capsule-configuration-and-modes).
+You can then easily run your capsule in a specific mode by adding the `-Dcapsule.mode=MODE` argument at the command line. See more at [capsule modes](http://www.capsule.io/user-guide/#modes-platform--and-version-specific-configuration).
 
 The maven plugin supports a convenient way to define modes for your capsule (include the below in the `<configuration>` tag).
 
@@ -400,7 +400,15 @@ Capsule supports defining your own Capsule class by extending the `Capsule.class
 
 If you have more than one, just add a space in between each one for e.g `<caplets>MyCapsule MyCapsule2</caplets>`.
 
-See more info on [caplets](https://github.com/puniverse/capsule#caplets).
+If you want to use a caplet that's not a local class (i.e from a dependency) then you must specify the full coordinates of it like so:
+
+`<caplets>co.paralleluniverse:capsule-daemon:0.1.0</caplets>`
+
+And you can mix local and non-local caplets too:
+
+`<caplets>MyCapsule co.paralleluniverse:capsule-daemon:0.1.0</caplets>`
+
+See more info on [caplets](http://www.capsule.io/caplets/).
 
 ## Maven Exec Plugin Integration
 
@@ -529,7 +537,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
 * `<transitive> (Optional)`: Specify whether transitive dependencies should also be embedded. Only applicable for `fat` capsules, and the default is true.
-* `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](https://github.com/puniverse/capsule#reference) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
+* `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](http://www.capsule.io/reference/) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
 * `<dependencySets> (Optional)`: Define a set of `<dependencySet>` to copy over files contained within remote dependencies into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).

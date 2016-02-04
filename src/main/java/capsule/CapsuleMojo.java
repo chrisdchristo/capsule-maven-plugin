@@ -177,12 +177,12 @@ public class CapsuleMojo extends AbstractMojo {
 					});
 				} catch (final IOException e) { e.printStackTrace(); }
 
-				if (!capletFiles.containsKey(caplet)) {
-					warn("Could not find caplet " + caplet + " class, skipping.");
-				} else {
-					if (capletString.length() > 0) capletString.append(" ");
+				if (!capletFiles.containsKey(caplet))
+					if (!caplet.contains(":")) // not from repo
+						warn("Could not find caplet " + caplet + " class, skipping.");
+
+				if (capletString.length() > 0) capletString.append(" ");
 					capletString.append(caplet);
-				}
 			}
 			caplets = capletString.toString();
 		}
