@@ -8,8 +8,7 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
-import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.project.DefaultMavenProjectHelper;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
@@ -32,11 +31,12 @@ import java.util.jar.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 
-public abstract class CapsuleMojo extends AbstractMojo {
+@Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
+public class CapsuleMojo extends AbstractMojo {
 
 	public String LOG_PREFIX = "[Capsule] ";
 
-	public static final String DEFAULT_CAPSULE_VERSION = "1.0";
+	public static final String DEFAULT_CAPSULE_VERSION = "1.0.1";
 
 	public static final String CAPSULE_GROUP = "co.paralleluniverse";
 	public static final String DEFAULT_CAPSULE_NAME = "Capsule";
@@ -241,6 +241,15 @@ public abstract class CapsuleMojo extends AbstractMojo {
 
 		info("Using Capsule Version: " + capsuleVersion);
 		debug("Output Directory: " + output.toString());
+
+		try {
+			if (buildEmpty) buildEmpty();
+			if (buildThin) buildThin();
+			if (buildFat) buildFat();
+		} catch (final IOException e) {
+			e.printStackTrace();
+			throw new MojoFailureException(e.getMessage());
+		}
 
 	}
 

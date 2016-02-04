@@ -13,7 +13,7 @@ A pro? [Skip to the plugin reference](https://github.com/chrischristo/capsule-ma
 
 Requires java version 1.7+ and maven 3.1.x+
 
-Supports [Capsule v1.0.1](https://github.com/puniverse/capsule/releases/tag/v1.0.1) and below (It may also support new versions of Capsules, but use at your own risk).
+Supports [Capsule v1.0.1](https://github.com/puniverse/capsule/releases/tag/v1.0.1) and below (It may also support new versions of Capsule, but use at your own risk).
 
 #### Building from source
 Clone the project and run a maven install:
@@ -87,7 +87,7 @@ Or alternatively you could use the `maven-exec-plugin` to run your app (as you d
 
 Capsule essentially defines three types of capsules:
 
-- `fat`: This capsule jar will contain your app's jar as well as **all** its dependencies. When the fat-jar is run, capsule will simply setup the app and run it, without needing to resolve any dependencies.
+- `fat`: This capsule jar will contain your app's jar as well as **some (or all)** its dependencies. When the fat-jar is run, if all dependencies are included, then Capsule will simply setup the app and run it. If there are any missing dependencies then Capsule will resolve any missing dependencies at runtime (in the cache) before running it.
 - `thin`: This capsule jar will contain your app's classes but **no** dependencies. Capsule will resolve these dependencies at runtime (in the cache).
 - `empty`: This capsule will not include your app, or any of its dependencies. It will only contain the name of your app declared in the jar's manifest, along with capsule's classes. Capsule will read the manifest entry `Application` and resolve the app and its dependencies in Capsule's own cache (default `~/.capsule`).
 
@@ -112,7 +112,7 @@ If you only want a specific capsule type to be built, you can add the `<types>` 
 
 ## Excluding dependencies in the fat jar
 
-Perhaps something between a thin and a fat jar is desired, where only certain dependencies are included in the built capsule (and the others resolved at runtime).
+Typically when building a fat jar, you will include all the dependencies to avoid the resolution at runtime. However, certain scenarios desire the case where only certain dependencies are included in the built capsule (and the others resolved at runtime).
 
 This can be done by building a fat jar and just excluding the dependencies you don't want. This is as simple as setting the scope to ```provided``` on the dependency in the pom.xml like so:
 
@@ -126,11 +126,11 @@ This can be done by building a fat jar and just excluding the dependencies you d
 ```
 
 For the fat jar, the plugin only embeds dependencies that are scoped ```compile``` or ```runtime```, so any other scoped dependency will not be embedded (such as ```provided```).
-Capsule will download the rest at runtime.
+Capsule will download the rest at runtime (the plugin will mark these dependencies in the manifest so Capsule will indeed do this).
 
 ## Excluding Transitive dependencies in the fat jar
 
-By default, the plugin will embed the dependencies and their transitive dependencies, so that the jar can run without needing to download anything.
+By default, the plugin will embed the dependencies and their transitive dependencies (i.e dependencies of dependencies), as they will also be required to run the app.
 
 However if transitive dependencies are not desired then this can be turned off. Simply set the configuration property `transitive` to false:
 
@@ -179,9 +179,17 @@ However with the really executable builds, you can alternatively run the capsule
 ./target/my-app-1.0-capsule-fat.x
 ```
 
+or
+
+```
+sh target/my-app-1.0-capsule-fat.x
+```
+
 ##### Trampoline
 
 When a capsule is launched, two processes are involved: first, a JVM process runs the capsule launcher, which then starts up a second, child process that runs the actual application. The two processes are linked so that killing or suspending one, will do the same for the other. While this model works well enough in most scenarios, sometimes it is desirable to directly launch the process running the application, rather than indirectly. This is supported by "capsule trampoline". [See more here at capsule](https://github.com/puniverse/capsule#the-capsule-execution-process).
+
+Essentially the concept defines that that when you execute the built Capsule jar, it will simply just output (in text) the full command needed to run the app (this will be a long command with all jvm and classpath args defined). The idea is then to just copy/paste the command and execute it raw.
 
 If you would like to build 'trampoline' executable capsules you can add the `<trampoline>true</trampoline>` flag to the plugin's configuration:
 
