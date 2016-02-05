@@ -7,6 +7,9 @@ Capsule Maven Plugin
 
 A maven plugin to build a capsule(s) out of your jar file.
 
+- [Capsule | simple java deployment](https://medium.com/@chrischristo/capsule-simple-java-delpoyment-7a70be622375)
+- [Capsule & AWS | Java on the cloud](https://medium.com/@chrischristo/capsule-aws-java-on-the-cloud-4abe2d4d6c89)
+
 See more at [capsule](https://github.com/puniverse/capsule) and the [demo using the plugin](https://github.com/chrischristo/capsule-maven-plugin-demo).
 
 A pro? [Skip to the plugin reference](https://github.com/chrischristo/capsule-maven-plugin#reference).
@@ -279,7 +282,7 @@ The output capsule jars are names as per the `<finalName>` tag with the appendin
 ```
 
 So for example if you'd like to have your output 'thin' jar like 'my-amazing-app-thin-cap.jar' then you would do the following:
- 
+
 ```
 <build>
 	<finalName>my-amazing-app</finalName>
@@ -299,7 +302,7 @@ So for example if you'd like to have your output 'thin' jar like 'my-amazing-app
 </build>
 ```
 
-Note by default the descriptor tags are `-capsule-empty`, `-capsule-thing` and `-capsule-fat`. 
+Note by default the descriptor tags are `-capsule-empty`, `-capsule-thing` and `-capsule-fat`.
 
 
 ## Modes
@@ -340,7 +343,7 @@ Of course, you can define multiple modes.
 
 ## FileSets and DependencySets
 
-If you'd like to copy over specific files from some local folder or from files embedded in some dependency then you can use the 
+If you'd like to copy over specific files from some local folder or from files embedded in some dependency then you can use the
  assembly style `<fileSets>` and `<dependencySets>` in the `<configuration>` tag.
 
 ```
@@ -355,7 +358,7 @@ If you'd like to copy over specific files from some local folder or from files e
 </fileSets>
 ```
 
-```	
+```
 <dependencySets>
 	<dependencySet>
 		<groupId>com.google.guava</groupId>
@@ -363,7 +366,7 @@ If you'd like to copy over specific files from some local folder or from files e
 		<version>optional</version>
 		<outputDirectory>config/</outputDirectory>
 		<includes>
-			<include>META-INF/MANIFEST.MF</include> 
+			<include>META-INF/MANIFEST.MF</include>
 		</includes>
 	</dependencySet>
 </dependencySets>
@@ -612,7 +615,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 				</includes>
 			</fileSet>
 		</fileSets>
-		
+
 		<dependencySets>
     	<dependencySet>
     		<groupId>com.google.guava</groupId>
@@ -620,7 +623,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
     		<version>optional</version>
     		<outputDirectory>config/</outputDirectory>
     		<includes>
-    			<include>META-INF/MANIFEST.MF</include> 
+    			<include>META-INF/MANIFEST.MF</include>
     		</includes>
     	</dependencySet>
     </dependencySets>
