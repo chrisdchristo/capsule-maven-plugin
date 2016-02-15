@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.0.2-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.0.2-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.0.3-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.0.3-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
@@ -131,7 +131,31 @@ This can be done by building a fat jar and just excluding the dependencies you d
 For the fat jar, the plugin only embeds dependencies that are scoped ```compile``` or ```runtime```, so any other scoped dependency will not be embedded (such as ```provided```).
 Capsule will download the rest at runtime (the plugin will mark these dependencies in the manifest so Capsule will indeed do this).
 
-## Excluding Transitive dependencies in the fat jar
+### Excluding Optional dependencies in the fat jar
+
+By default, the plugin will embed dependencies marked `<optional>true</optional>`.
+
+So, for example an optional dependency is delcared like so:
+
+```
+<dependency>
+	<groupId>com.google.guava</groupId>
+	<artifactId>guava</artifactId>
+	<version>17.0</version>
+	<optional>true</optional>
+</dependency>
+```
+
+However if optional dependencies are not desired then this can be turned off. Simply set the configuration property `optional` to false:
+
+```
+<configuration>
+	<appClass>hello.HelloWorld</appClass>
+	<optional>false</optional>
+</configuration>
+```
+
+### Excluding Transitive dependencies in the fat jar
 
 By default, the plugin will embed the dependencies and their transitive dependencies (i.e dependencies of dependencies), as they will also be required to run the app.
 
@@ -540,6 +564,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
 * `<transitive> (Optional)`: Specify whether transitive dependencies should also be embedded. Only applicable for `fat` capsules, and the default is true.
+* `<optional> (Optional)`: Specify whether optional dependencies should also be embedded. Only applicable for `fat` capsules, and the default is true.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](http://www.capsule.io/reference/) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
@@ -564,6 +589,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<!-- <trampoline>true</trampoline> -->
 		<!-- <types>thin fat</types> -->
 		<!-- <transitive>true</transitive>
+		<!-- <optional>true</optional>
 		<!-- <execPluginConfig>root</execPluginConfig> -->
 		<!-- <caplets>MyCapsule MyCapsule2</caplets> -->
 		<!-- <customDescriptorEmpty>-cap-empty</customDescriptorEmpty> -->

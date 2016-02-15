@@ -95,6 +95,8 @@ public class CapsuleMojo extends AbstractMojo {
 	protected String types = null;
 	@Parameter(property = "capsule.transitive")
 	protected Boolean transitive = true; // whether or not to include transitive dependencies for fat jar
+	@Parameter(property = "capsule.optional")
+	protected Boolean optional = true; // whether or not to include optional dependencies for fat jar
 	@Parameter(property = "capsule.caplets")
 	protected String caplets;
 	@Parameter(property = "capsule.execPluginConfig")
@@ -383,6 +385,8 @@ public class CapsuleMojo extends AbstractMojo {
 				for (final Artifact artifact : artifacts) {
 					if (artifact.getFile() == null) {
 						warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
+					} else if (!optional && artifact.isOptional()) {
+						warn("Dependency[" + artifact + "] is optional and will not be added to fat jar.");
 					} else {
 						debug("(Transitive) adding - " + artifact.getFile().getName());
 						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
@@ -395,6 +399,8 @@ public class CapsuleMojo extends AbstractMojo {
 						warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
 					} else if (!(artifact.getScope().equals("compile") || artifact.getScope().equals("runtime"))) {
 						warn("Dependency[" + artifact + "] skipped, as its not compile or runtime scope (" + artifact.getScope() + ")");
+					} else if (!optional && artifact.isOptional()) {
+						warn("Dependency[" + artifact + "] is optional and will not be added to fat jar.");
 					} else {
 						debug("adding - " + artifact.getFile().getName());
 						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
