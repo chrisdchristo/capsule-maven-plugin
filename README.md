@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.0.3-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.0.3-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.0.4-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.0.4-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
@@ -90,7 +90,7 @@ Or alternatively you could use the `maven-exec-plugin` to run your app (as you d
 
 Capsule essentially defines three types of capsules:
 
-- `fat`: This capsule jar will contain your app's jar as well as **some (or all)** its dependencies. When the fat-jar is run, if all dependencies are included, then Capsule will simply setup the app and run it. If there are any missing dependencies then Capsule will resolve any missing dependencies at runtime (in the cache) before running it.
+- `fat`: This capsule jar will contain your app's jar as well as **some** (or usually, **all**) its dependencies. When the fat-jar is run, if all dependencies are included, then Capsule will simply setup the app and run it. If there are any missing dependencies then Capsule will resolve any missing dependencies at runtime (in the cache) before running it.
 - `thin`: This capsule jar will contain your app's classes but **no** dependencies. Capsule will resolve these dependencies at runtime (in the cache).
 - `empty`: This capsule will not include your app, or any of its dependencies. It will only contain the name of your app declared in the jar's manifest, along with capsule's classes. Capsule will read the manifest entry `Application` and resolve the app and its dependencies in Capsule's own cache (default `~/.capsule`).
 
@@ -112,6 +112,23 @@ If you only want a specific capsule type to be built, you can add the `<types>` 
 	<types>thin fat</types>
 </configuration>
 ```
+
+## Runtime Resolution
+
+To perform the resolution at runtime, the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory for the ```empty``` and ```thin``` capsules as dependency resolution is required. For the ```fat``` capsule, this additional code is only needed if some of the dependencies need to be resolved at runtime (so for example if you choose to excluded some, see next sections on this). So for ```fat``` capsules that have all their dependencies embedded at build time and thus don't need any resolution at runtime, can be built without this additional code.
+
+To build the ```fat``` capsule without this additional code, set the ```resolve ``` flag to false.
+
+```
+<configuration>
+	<appClass>hello.HelloWorld</appClass>
+	<types>fat</types>
+	<resolve>false<resolve>
+</configuration>
+```
+
+You can set this flag to false for other types of capsules if you plan on providing the dependencies manually (such as in the local Capsule cache).
+
 
 ## Excluding dependencies in the fat jar
 
@@ -135,7 +152,7 @@ Capsule will download the rest at runtime (the plugin will mark these dependenci
 
 By default, the plugin will embed dependencies marked `<optional>true</optional>`.
 
-So, for example an optional dependency is delcared like so:
+So, for example an optional dependency is declared like so:
 
 ```
 <dependency>
@@ -565,6 +582,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<properties> (Optional)`: The system properties to provide the app with.
 * `<transitive> (Optional)`: Specify whether transitive dependencies should also be embedded. Only applicable for `fat` capsules, and the default is true.
 * `<optional> (Optional)`: Specify whether optional dependencies should also be embedded. Only applicable for `fat` capsules, and the default is true.
+* `<resolve> (Optional)`: Specify whether dependencies should be resolved at runtime (by the ```MavenCaplet```). Typically this is required whenever a dependency is needed to be resolved (such as for ```empty``` or ```thin``` capsules, and for ```fat``` capsules when not all dependencies are embedded). The default is true.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](http://www.capsule.io/reference/) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
