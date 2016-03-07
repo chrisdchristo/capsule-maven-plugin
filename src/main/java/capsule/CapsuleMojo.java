@@ -856,20 +856,18 @@ public class CapsuleMojo extends AbstractMojo {
 	@SuppressWarnings("unchecked")
 	protected SelectedResults selectDependenciesAndLocalArtifacts() {
 		SelectedResults selectedResults = new SelectedResults();
-		int depth = 0;
 		Queue<DependencyDepth> queue = new LinkedList<>();
-		queue.addAll(DependencyDepth.fromList(depth, mavenProject.getDependencies()));
+		queue.addAll(DependencyDepth.fromList(0, mavenProject.getDependencies()));
 		DependencyDepth dependencyDepth;
 		Map<String, DependencyDepth> dependencyDepthMap = new HashMap<>();
 		while ((dependencyDepth = queue.poll()) != null) {
-			depth++;
 			if (isCapsulableScope(dependencyDepth.dependency) && !isCapsuleDependency(dependencyDepth.dependency)) {
 				String artifactString = createArtifactString(dependencyDepth.dependency);
 				if (localProjects.containsKey(artifactString)) {
 					MavenProject project = localProjects.get(createArtifactString(dependencyDepth.dependency));
 					selectedResults.artifactList.add(project.getArtifact());
 					debug("Selected local artifact:" + project.getArtifact());
-					queue.addAll(DependencyDepth.fromList(depth, project.getDependencies()));
+					queue.addAll(DependencyDepth.fromList(dependencyDepth.depth + 1, project.getDependencies()));
 				} else if (shouldAddDependency(dependencyDepthMap, artifactString, dependencyDepth)) {
 					debug("Selected dependency to capsule (might be updated):" + dependencyDepth.dependency);
 					dependencyDepthMap.put(artifactString, dependencyDepth);
