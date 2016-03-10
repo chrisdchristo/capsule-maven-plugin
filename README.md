@@ -685,16 +685,17 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		</fileSets>
 
 		<dependencySets>
-    	<dependencySet>
-    		<groupId>com.google.guava</groupId>
-    		<artifactId>guava</artifactId>
-    		<version>optional</version>
-    		<outputDirectory>config/</outputDirectory>
-    		<includes>
-    			<include>META-INF/MANIFEST.MF</include>
-    		</includes>
-    	</dependencySet>
-    </dependencySets>
+			<dependencySet>
+			  <groupId>com.google.guava</groupId>
+			  <artifactId>guava</artifactId>
+			  <version>optional</version>
+			  <outputDirectory>config/</outputDirectory>
+			  <!--<unpack>true</unpack>-->
+			  <includes>
+			    <include>META-INF/MANIFEST.MF</include>
+			  </includes>
+			</dependencySet>
+		</dependencySets>
 
 	</configuration>
 	<executions>
