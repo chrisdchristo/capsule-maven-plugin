@@ -297,7 +297,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 			IOUtil.close(jarStream);
 		} else {
-			debug("EXISTS - " + jarFile.getName());
+			info("EXISTS - " + jarFile.getName() + " (WILL NOT OVERWRITE)");
 		}
 
 		final List<File> jars = createExecCopy(jarFile);
@@ -351,7 +351,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 			IOUtil.close(jarStream);
 		} else {
-			debug("EXISTS - " + jarFile.getName());
+			info("EXISTS - " + jarFile.getName() + " (WILL NOT OVERWRITE)");
 		}
 
 		final List<File> jars = createExecCopy(jarFile);
@@ -377,7 +377,7 @@ public class CapsuleMojo extends AbstractMojo {
 			final Map<String, String> additionalAttributes = new HashMap<>();
 
 			// add manifest (with Dependencies+Repositories list)
-			additionalAttributes.put("Dependencies", getProvidedScopedDependencyString());
+			additionalAttributes.put("Dependencies", getDependencyString());
 			additionalAttributes.put("Repositories", getRepoString());
 			if (resolve) {
 				additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet & others
@@ -404,7 +404,7 @@ public class CapsuleMojo extends AbstractMojo {
 					} else if (!optional && artifact.isOptional()) {
 						warn("Dependency[" + artifact + "] is optional and will not be added to fat jar.");
 					} else {
-						debug("(Transitive) adding - " + artifact.getFile().getName());
+						debug("adding - " + artifact.getFile().getName() + " (With Transitive)");
 						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
 					}
 				}
@@ -443,7 +443,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 			IOUtil.close(jarStream);
 		} else {
-			debug("EXISTS - " + jarFile.getName());
+			info("EXISTS - " + jarFile.getName() + " (WILL NOT OVERWRITE)");
 		}
 
 		final List<File> jars = createExecCopy(jarFile);
@@ -623,9 +623,11 @@ public class CapsuleMojo extends AbstractMojo {
 		if (dependencySets == null) return;
 
 		for (final DependencySet dependencySet : dependencySets) {
-			for (final Artifact artifact : artifacts) {
+			for (final Object artifactObject : mavenProject.getDependencyArtifacts()) {
+				final Artifact artifact = (Artifact) artifactObject;
 				if (dependencySet.groupId.equals(artifact.getGroupId()) && dependencySet.artifactId.equals(artifact.getArtifactId())) {
 					if (dependencySet.version == null || dependencySet.version.equals(artifact.getVersion())) {
+
 						if (artifact.getFile() == null) {
 							warn("Could not resolve dependency: " + dependencySet.groupId + ":" + dependencySet.artifactId + ":" + dependencySet.version);
 							continue;
@@ -635,15 +637,39 @@ public class CapsuleMojo extends AbstractMojo {
 
 						final String outputDirectory = addDirectoryToJar(jar, dependencySet.outputDirectory);
 
-						for (final String include : dependencySet.includes) {
-							final ZipEntry entry = jarFile.getEntry(include);
-							if (entry != null) {
-								info("Adding " + include + " from " + artifact.getFile());
-								addToJar(outputDirectory + include, jarFile.getInputStream(entry), jar);
+						// if includes is set add only specified
+						if (dependencySet.includes != null && dependencySet.includes.length > 0) {
+							for (final String include : dependencySet.includes) {
+								final ZipEntry entry = jarFile.getEntry(include);
+								if (entry != null) {
+									info("DependencySet - Adding " + include + " from " + artifact.getFile() + " to " + outputDirectory);
+									addToJar(outputDirectory + include, jarFile.getInputStream(entry), jar);
+								} else {
+									warn(include + " not found in " + artifact.getFile());
+								}
+							}
+
+						// else add whole file
+						} else {
+							if (!dependencySet.unpack) {
+								info("DependencySet - Adding " + artifact.getFile().getName() + " to " + outputDirectory);
+								addToJar(outputDirectory + artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
 							} else {
-								warn(include + " not found in " + artifact.getFile());
+								if (artifact.getType() != null && artifact.getType().equals("jar")) {
+									info("DependencySet - Adding (unpacked) " + artifact.getFile().getName() + " to " + outputDirectory);
+									final Enumeration<JarEntry> entries = jarFile.entries();
+									while (entries.hasMoreElements()) {
+										final JarEntry entry = entries.nextElement();
+										debug("DependencySet - Adding (unpacked) " + outputDirectory + entry.getName());
+										addToJar(outputDirectory + entry.getName(), jarFile.getInputStream(entry), jar);
+									}
+								} else {
+									warn("DependencySet - Cannot unpack " + artifact.getFile().getName() + " as it is not in jar format.");
+								}
 							}
 						}
+					} else {
+						warn("DependencySet - Artifact version mismatch: " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion());
 					}
 				}
 			}
@@ -820,7 +846,10 @@ public class CapsuleMojo extends AbstractMojo {
 			out.write((prefix).getBytes("ASCII"));
 			Files.copy(jar.toPath(), out);
 			out.flush();
-			Runtime.getRuntime().exec("chmod +x " + x.getAbsolutePath());
+//			Runtime.getRuntime().exec("chmod +x " + x.getAbsolutePath());
+			final boolean execResult = x.setExecutable(true, false);
+			if (!execResult)
+				warn("Failed to mark file executable - " + x.getAbsolutePath());
 		} finally {
 			IOUtil.close(in);
 			IOUtil.close(out);
@@ -862,8 +891,9 @@ public class CapsuleMojo extends AbstractMojo {
 		public String groupId;
 		public String artifactId;
 		public String version;
-		public String outputDirectory;
+		public String outputDirectory = "/";
 		public String[] includes;
+		public boolean unpack = false; // will unpack file of jar, zip, tar.gz, and tar.bz
 	}
 
 	public static class FileSet {

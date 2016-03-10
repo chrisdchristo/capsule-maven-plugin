@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.0.4-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.0.4-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.0.5-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.0.5-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a capsule(s) out of your jar file.
@@ -115,7 +115,7 @@ If you only want a specific capsule type to be built, you can add the `<types>` 
 
 ## Runtime Resolution
 
-To perform the resolution at runtime, the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory for the ```empty``` and ```thin``` capsules as dependency resolution is required. For the ```fat``` capsule, this additional code is only needed if some of the dependencies need to be resolved at runtime (so for example if you choose to excluded some, see next sections on this). So for ```fat``` capsules that have all their dependencies embedded at build time and thus don't need any resolution at runtime, can be built without this additional code.
+To perform the resolution at runtime, the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory for the ```empty``` and ```thin``` capsules as dependency resolution is required. For the ```fat``` capsule, this additional code is only needed if some of the dependencies need to be resolved at runtime (so for example if you choose to exclude some, see next sections on this). So for ```fat``` capsules that have all their dependencies embedded at build time and thus don't need any resolution at runtime, can be built without this additional code.
 
 To build the ```fat``` capsule without this additional code, set the ```resolve ``` flag to false.
 
@@ -404,7 +404,6 @@ If you'd like to copy over specific files from some local folder or from files e
 	<dependencySet>
 		<groupId>com.google.guava</groupId>
 		<artifactId>guava</artifactId>
-		<version>optional</version>
 		<outputDirectory>config/</outputDirectory>
 		<includes>
 			<include>META-INF/MANIFEST.MF</include>
@@ -419,6 +418,31 @@ And likewise with the dependency set defined, we pull the manifest file from wit
 You specify a number of `<fileSet>` which must contain the `<directory>` (the location of the folder to copy), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the `<directory>` to copy over.
 
 You specify a number of `<dependencySet>` which must contain the GAV of a project dependency (the version is optional), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the dependency to copy over.
+
+You could also copy over the whole dependency directly if you leave out the ```includes``` tag:
+
+```
+<dependencySets>
+	<dependencySet>
+		<groupId>com.google.guava</groupId>
+		<artifactId>guava</artifactId>
+		<outputDirectory>config/</outputDirectory>
+	</dependencySet>
+</dependencySets>
+```
+
+You could also copy over the whole dependency in an **unpacked** form if you mark the ```<unpack>true</unpack>``` flag.
+
+```
+<dependencySets>
+	<dependencySet>
+		<groupId>com.google.guava</groupId>
+		<artifactId>guava</artifactId>
+		<outputDirectory>config/</outputDirectory>
+		<unpack>true</unpack>
+	</dependencySet>
+</dependencySets>
+```
 
 ## Custom Capsule Version
 
@@ -611,8 +635,8 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<!-- <execPluginConfig>root</execPluginConfig> -->
 		<!-- <caplets>MyCapsule MyCapsule2</caplets> -->
 		<!-- <customDescriptorEmpty>-cap-empty</customDescriptorEmpty> -->
-    <!-- <customDescriptorThin>-cap-thin</customDescriptorThin> -->
-    <!-- <customDescriptorFat>-cap-fat</customDescriptorFat> -->
+		<!-- <customDescriptorThin>-cap-thin</customDescriptorThin> -->
+		<!-- <customDescriptorFat>-cap-fat</customDescriptorFat> -->
 
 		<properties>
 			<property>
