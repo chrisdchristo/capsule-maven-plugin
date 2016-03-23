@@ -1,5 +1,40 @@
 package capsule;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.jar.JarInputStream;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Exclusion;
@@ -8,7 +43,11 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.*;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.DefaultMavenProjectHelper;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
@@ -18,18 +57,12 @@ import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.resolution.*;
-
-import java.io.*;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
-import java.util.jar.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
+import org.eclipse.aether.resolution.ArtifactResult;
+import org.eclipse.aether.resolution.VersionRangeRequest;
+import org.eclipse.aether.resolution.VersionRangeResolutionException;
+import org.eclipse.aether.resolution.VersionRangeResult;
 
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.RUNTIME)
 public class CapsuleMojo extends AbstractMojo {
@@ -71,6 +104,11 @@ public class CapsuleMojo extends AbstractMojo {
 	protected String finalName = null;
 	@Parameter(defaultValue = "${project.build.directory}")
 	protected File buildDir = null;
+	/**
+	 * Contains the full list of projects in the reactor.
+	 */
+	@Parameter(defaultValue = "${reactorProjects}", readonly = true)
+	protected List<MavenProject> reactorProjects;
 
 	/**
 	 * OPTIONAL VARIABLES
@@ -131,6 +169,7 @@ public class CapsuleMojo extends AbstractMojo {
 	protected boolean buildEmpty = true, buildThin = true, buildFat = true;
 
 	final MavenProjectHelper helper = new DefaultMavenProjectHelper();
+	private final Map<String, MavenProject> localProjects = new HashMap<>();
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -245,6 +284,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		info("Using Capsule Version: " + capsuleVersion);
 		debug("Output Directory: " + output.toString());
+		createLocalProjectsMap();
 
 		try {
 			if (buildEmpty) buildEmpty();
@@ -254,6 +294,25 @@ public class CapsuleMojo extends AbstractMojo {
 			e.printStackTrace();
 			throw new MojoFailureException(e.getMessage());
 		}
+	}
+
+	private void createLocalProjectsMap() {
+		for (MavenProject reactorProject : reactorProjects) {
+			localProjects.put(createArtifactString(reactorProject.getArtifact()),
+					reactorProject);
+		}
+	}
+
+	private String createArtifactString(String groupId, String artifactId) {
+		return groupId + ":" + artifactId;
+	}
+
+	private String createArtifactString(final Artifact artifact) {
+		return createArtifactString(artifact.getGroupId(), artifact.getArtifactId());
+	}
+
+	private String createArtifactString(Dependency dependency) {
+		return createArtifactString(dependency.getGroupId(), dependency.getArtifactId());
 	}
 
 	/**
@@ -318,9 +377,13 @@ public class CapsuleMojo extends AbstractMojo {
 			final JarOutputStream jarStream = new JarOutputStream(new FileOutputStream(jarFile));
 			info(jarFile.getName());
 
+			SelectedResults dependenciesAndLocalArtifacts = selectDependenciesAndLocalArtifacts();
+			
+
 			// add manifest (with Dependencies+Repositories list)
 			final Map<String, String> additionalAttributes = new HashMap<>();
-			additionalAttributes.put("Dependencies", getDependencyString());
+			additionalAttributes.put("Dependencies",
+					createDependencyString(dependenciesAndLocalArtifacts.externalDependencies));
 			additionalAttributes.put("Repositories", getRepoString());
 			if (resolve) {
 				additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet & others
@@ -334,6 +397,8 @@ public class CapsuleMojo extends AbstractMojo {
 
 			// add Capsule.class
 			addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
+
+			addLocalArtifacts(dependenciesAndLocalArtifacts.localArtifacts, jarStream);
 
 			// add CapsuleMaven classes
 			if (resolve) {
@@ -361,6 +426,22 @@ public class CapsuleMojo extends AbstractMojo {
 		attachArtifact(Type.thin, jarFile);
 
 		return jars;
+	}
+
+	private String createDependencyString(Collection<Dependency> dependencyList) {
+		StringBuilder builder = new StringBuilder();
+		for (Dependency dependency : dependencyList) {
+			builder.append(getDependencyCoordsWithExclusions(dependency) + " ");
+		}
+		return builder.toString();
+	}
+
+	private void addLocalArtifacts(Collection<Artifact> artifactList, JarOutputStream jarStream)
+			throws FileNotFoundException, IOException {
+		for (Artifact artifact : artifactList) {
+			debug("adding local artifact to jar:" + artifact);
+			addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
+		}
 	}
 
 	/**
@@ -735,7 +816,8 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	protected String getDependencyCoordsWithExclusions(final Dependency dependency) {
-		final StringBuilder coords = new StringBuilder(dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion());
+		final StringBuilder coords = new StringBuilder();
+		appendDependency(coords, dependency);
 		if (dependency.getExclusions().size() > 0) {
 			final StringBuilder exclusionsList = new StringBuilder();
 			for (int i = 0; i < dependency.getExclusions().size(); i++) {
@@ -748,6 +830,15 @@ public class CapsuleMojo extends AbstractMojo {
 		return coords.toString();
 	}
 
+	private void appendDependency(final StringBuilder coords, final Dependency dependency) {
+		coords.append(dependency.getGroupId());
+		coords.append(":" + dependency.getArtifactId());
+		if (StringUtils.isNotEmpty(dependency.getClassifier())) {
+			coords.append(":" + dependency.getClassifier());
+		}
+		coords.append(":" + dependency.getVersion());
+	}
+
 	protected String getRepoString() {
 		final StringBuilder repoList = new StringBuilder();
 		for (final RemoteRepository repository : this.remoteRepos)
@@ -758,11 +849,59 @@ public class CapsuleMojo extends AbstractMojo {
 	protected String getDependencyString() {
 		final StringBuilder dependenciesList = new StringBuilder();
 		for (final Dependency dependency : (List<Dependency>) mavenProject.getDependencies())
-			if (dependency.getScope().equals("compile") || dependency.getScope().equals("runtime") || dependency.getScope().equals("provided"))
-				if (!(dependency.getGroupId().equalsIgnoreCase(CAPSULE_GROUP) && dependency.getArtifactId().equalsIgnoreCase(DEFAULT_CAPSULE_NAME))) // ignore the
+			if (isCapsulableScope(dependency))
+				if (!isCapsuleDependency(dependency)) // ignore the
 					// capsule lib as we already add this
 					dependenciesList.append(getDependencyCoordsWithExclusions(dependency)).append(" ");
 		return dependenciesList.toString();
+	}
+
+	@SuppressWarnings("unchecked")
+	protected SelectedResults selectDependenciesAndLocalArtifacts() {
+		SelectedResults selectedResults = new SelectedResults();
+		Queue<Dependency> queue = new LinkedList<>();
+		queue.addAll(mavenProject.getDependencies());
+		Map<String, Artifact> artifactMap = mavenProject.getArtifactMap();
+		Dependency dependency;
+		while ((dependency = queue.poll()) != null) {
+			if (isCapsulableScope(dependency) && !isCapsuleDependency(dependency)) {
+				String artifactString = createArtifactString(dependency);
+				Artifact artifact = artifactMap.get(artifactString);
+				if (localProjects.containsKey(artifactString)) {
+					MavenProject project = localProjects.get(createArtifactString(dependency));
+					selectedResults.localArtifacts.add(project.getArtifact());
+					debug("Selected local artifact:" + project.getArtifact());
+					queue.addAll(project.getDependencies());
+				} else if (isCreatedFromDependency(artifact, dependency)) {
+					selectedResults.externalDependencies.add(dependency);
+					debug("Selected dependency to capsule:" + dependency);
+				} else {
+					debug("Skipping artifact " + artifact + " since wasn't created from dependency:" + dependency);
+				}
+
+			}
+		}
+		return selectedResults;
+	}
+
+	private boolean isCreatedFromDependency(Artifact artifact, Dependency dependency) {
+		return StringUtils.equals(dependency.getArtifactId(), artifact.getArtifactId())
+				&& StringUtils.equals(dependency.getGroupId(), artifact.getGroupId())
+				&& StringUtils.equals(dependency.getVersion(), artifact.getVersion())
+				&& StringUtils.equals(dependency.getScope(), artifact.getScope())
+				&& StringUtils.equals(dependency.getType(), artifact.getType())
+				&& StringUtils.equals(dependency.getClassifier(), artifact.getClassifier());
+
+	}
+
+	private boolean isCapsuleDependency(final Dependency dependency) {
+		return dependency.getGroupId().equalsIgnoreCase(CAPSULE_GROUP)
+				&& dependency.getArtifactId().equalsIgnoreCase(DEFAULT_CAPSULE_NAME);
+	}
+
+	private boolean isCapsulableScope(final Dependency dependency) {
+		return dependency.getScope().equals("compile") || dependency.getScope().equals("runtime")
+				|| dependency.getScope().equals("provided");
 	}
 
 	protected String getProvidedScopedDependencyString() {
@@ -900,6 +1039,11 @@ public class CapsuleMojo extends AbstractMojo {
 		public String directory;
 		public String outputDirectory;
 		public String[] includes;
+	}
+
+	private static class SelectedResults {
+		public final Set<Dependency> externalDependencies = new LinkedHashSet<>();
+		public final Set<Artifact> localArtifacts = new HashSet<>();
 	}
 
 	protected String formatDirectoryPath(final String directoryPath) {
