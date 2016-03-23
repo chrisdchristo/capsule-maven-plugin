@@ -16,11 +16,15 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -32,7 +36,6 @@ import java.util.zip.ZipException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Exclusion;
 import org.apache.maven.model.Plugin;
@@ -380,7 +383,7 @@ public class CapsuleMojo extends AbstractMojo {
 			// add manifest (with Dependencies+Repositories list)
 			final Map<String, String> additionalAttributes = new HashMap<>();
 			additionalAttributes.put("Dependencies",
-					createDependencyString(dependenciesAndLocalArtifacts.dependencyList));
+					createDependencyString(dependenciesAndLocalArtifacts.externalDependencies));
 			additionalAttributes.put("Repositories", getRepoString());
 			if (resolve) {
 				additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet & others
@@ -395,7 +398,7 @@ public class CapsuleMojo extends AbstractMojo {
 			// add Capsule.class
 			addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
 
-			addLocalArtifacts(dependenciesAndLocalArtifacts.artifactList, jarStream);
+			addLocalArtifacts(dependenciesAndLocalArtifacts.localArtifacts, jarStream);
 
 			// add CapsuleMaven classes
 			if (resolve) {
@@ -425,7 +428,7 @@ public class CapsuleMojo extends AbstractMojo {
 		return jars;
 	}
 
-	private String createDependencyString(List<Dependency> dependencyList) {
+	private String createDependencyString(Collection<Dependency> dependencyList) {
 		StringBuilder builder = new StringBuilder();
 		for (Dependency dependency : dependencyList) {
 			builder.append(getDependencyCoordsWithExclusions(dependency) + " ");
@@ -433,7 +436,7 @@ public class CapsuleMojo extends AbstractMojo {
 		return builder.toString();
 	}
 
-	private void addLocalArtifacts(List<Artifact> artifactList, JarOutputStream jarStream)
+	private void addLocalArtifacts(Collection<Artifact> artifactList, JarOutputStream jarStream)
 			throws FileNotFoundException, IOException {
 		for (Artifact artifact : artifactList) {
 			debug("adding local artifact to jar:" + artifact);
@@ -856,46 +859,40 @@ public class CapsuleMojo extends AbstractMojo {
 	@SuppressWarnings("unchecked")
 	protected SelectedResults selectDependenciesAndLocalArtifacts() {
 		SelectedResults selectedResults = new SelectedResults();
-		Queue<DependencyDepth> queue = new LinkedList<>();
-		queue.addAll(DependencyDepth.fromList(0, mavenProject.getDependencies()));
-		DependencyDepth dependencyDepth;
-		Map<String, DependencyDepth> dependencyDepthMap = new HashMap<>();
-		while ((dependencyDepth = queue.poll()) != null) {
-			if (isCapsulableScope(dependencyDepth.dependency) && !isCapsuleDependency(dependencyDepth.dependency)) {
-				String artifactString = createArtifactString(dependencyDepth.dependency);
+		Queue<Dependency> queue = new LinkedList<>();
+		queue.addAll(mavenProject.getDependencies());
+		Map<String, Artifact> artifactMap = mavenProject.getArtifactMap();
+		Dependency dependency;
+		while ((dependency = queue.poll()) != null) {
+			if (isCapsulableScope(dependency) && !isCapsuleDependency(dependency)) {
+				String artifactString = createArtifactString(dependency);
+				Artifact artifact = artifactMap.get(artifactString);
 				if (localProjects.containsKey(artifactString)) {
-					MavenProject project = localProjects.get(createArtifactString(dependencyDepth.dependency));
-					selectedResults.artifactList.add(project.getArtifact());
+					MavenProject project = localProjects.get(createArtifactString(dependency));
+					selectedResults.localArtifacts.add(project.getArtifact());
 					debug("Selected local artifact:" + project.getArtifact());
-					queue.addAll(DependencyDepth.fromList(dependencyDepth.depth + 1, project.getDependencies()));
-				} else if (shouldAddDependency(dependencyDepthMap, artifactString, dependencyDepth)) {
-					debug("Selected dependency to capsule (might be updated):" + dependencyDepth.dependency);
-					dependencyDepthMap.put(artifactString, dependencyDepth);
+					queue.addAll(project.getDependencies());
+				} else if (isCreatedFromDependency(artifact, dependency)) {
+					selectedResults.externalDependencies.add(dependency);
+					debug("Selected dependency to capsule:" + dependency);
+				} else {
+					debug("Skipping artifact " + artifact + " since wasn't created from dependency:" + dependency);
 				}
+
 			}
 		}
-		selectedResults.dependencyList.addAll(DependencyDepth.toDependencyList(dependencyDepthMap.values()));
 		return selectedResults;
 	}
 
-	private boolean shouldAddDependency(Map<String, DependencyDepth> dependencyDepthMap, String artifactString,
-			DependencyDepth dependencyDepth) {
-		if (dependencyDepthMap.containsKey(artifactString)) {
-			DependencyDepth dependencyDepthStored = dependencyDepthMap.get(artifactString);
-			if (dependencyDepth.depth < dependencyDepthStored.depth) {
-				return true;
-			} else if (dependencyDepth.depth == dependencyDepthStored.depth) {
-				ComparableVersion dependencyVersion = new ComparableVersion(dependencyDepth.dependency.getVersion());
-				ComparableVersion dependencyStoredVersion = new ComparableVersion(
-						dependencyDepthStored.dependency.getVersion());
-				return (dependencyVersion.compareTo(dependencyStoredVersion) > 0);
-			} else {
-				return false;
-			}
-		}
-		return true;
-	}
+	private boolean isCreatedFromDependency(Artifact artifact, Dependency dependency) {
+		return StringUtils.equals(dependency.getArtifactId(), artifact.getArtifactId())
+				&& StringUtils.equals(dependency.getGroupId(), artifact.getGroupId())
+				&& StringUtils.equals(dependency.getVersion(), artifact.getVersion())
+				&& StringUtils.equals(dependency.getScope(), artifact.getScope())
+				&& StringUtils.equals(dependency.getType(), artifact.getType())
+				&& StringUtils.equals(dependency.getClassifier(), artifact.getClassifier());
 
+	}
 
 	private boolean isCapsuleDependency(final Dependency dependency) {
 		return dependency.getGroupId().equalsIgnoreCase(CAPSULE_GROUP)
@@ -1045,35 +1042,8 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private static class SelectedResults {
-		public final List<Dependency> dependencyList = new ArrayList<>();
-		public final List<Artifact> artifactList = new ArrayList<>();
-	}
-
-	private static class DependencyDepth {
-		public final int depth;
-		public final Dependency dependency;
-
-		public DependencyDepth(int depth, Dependency dependency) {
-			this.depth = depth;
-			this.dependency = dependency;
-		}
-
-		public static Collection<Dependency> toDependencyList(Collection<DependencyDepth> dependencyDepths) {
-			List<Dependency> resultList = new ArrayList<>();
-			for (DependencyDepth dependencyDepth : dependencyDepths) {
-				resultList.add(dependencyDepth.dependency);
-			}
-			return resultList;
-		}
-
-		public static List<DependencyDepth> fromList(int depth, List<Dependency> dependencies) {
-			List<DependencyDepth> resultList = new ArrayList<>();
-			for (Dependency dependency : dependencies) {
-				resultList.add(new DependencyDepth(depth, dependency));
-			}
-			return resultList;
-		}
-
+		public final Set<Dependency> externalDependencies = new LinkedHashSet<>();
+		public final Set<Artifact> localArtifacts = new HashSet<>();
 	}
 
 	protected String formatDirectoryPath(final String directoryPath) {
