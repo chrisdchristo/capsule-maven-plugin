@@ -137,14 +137,14 @@ So if a ```thin``` capsule is desired, it can be done like so:
 			<configuration>
 				<appClass>hello.HelloWorld</appClass>
 				<includeApp>true</includeApp>
-        <includeCompileDep>false</includeCompileDep>
-        <includeRuntimeDep>false</includeRuntimeDep>
-        <includeSystemDep>false</includeSystemDep>
-        <includeTransitiveDep>false</includeTransitiveDep>
-        <resolveCompileDep>true</resolveCompileDep>
-        <resolveRuntimeDep>true</resolveRuntimeDep>
-        <resolveSystemDep>true</resolveSystemDep>
-        <resolveTransitiveDep>true</resolveTransitiveDep>
+				<includeCompileDep>false</includeCompileDep>
+				<includeRuntimeDep>false</includeRuntimeDep>
+				<includeSystemDep>false</includeSystemDep>
+				<includeTransitiveDep>false</includeTransitiveDep>
+				<resolveCompileDep>true</resolveCompileDep>
+				<resolveRuntimeDep>true</resolveRuntimeDep>
+				<resolveSystemDep>true</resolveSystemDep>
+				<resolveTransitiveDep>true</resolveTransitiveDep>
 			</configuration>
 		</execution>
 	</executions>
@@ -166,15 +166,15 @@ And likewise if an ```empty``` capsule is desired, it can be done like so:
 			<configuration>
 				<appClass>hello.HelloWorld</appClass>
 				<includeApp>false</includeApp>
-        <includeCompileDep>false</includeCompileDep>
-        <includeRuntimeDep>false</includeRuntimeDep>
-        <includeSystemDep>false</includeSystemDep>
-        <includeTransitiveDep>false</includeTransitiveDep>
-        <resolveApp>true</resolveApp>
-        <resolveCompileDep>true</resolveCompileDep>
-        <resolveRuntimeDep>true</resolveRuntimeDep>
-        <resolveSystemDep>true</resolveSystemDep>
-        <resolveTransitiveDep>true</resolveTransitiveDep>
+				<includeCompileDep>false</includeCompileDep>
+				<includeRuntimeDep>false</includeRuntimeDep>
+				<includeSystemDep>false</includeSystemDep>
+				<includeTransitiveDep>false</includeTransitiveDep>
+				<resolveApp>true</resolveApp>
+				<resolveCompileDep>true</resolveCompileDep>
+				<resolveRuntimeDep>true</resolveRuntimeDep>
+				<resolveSystemDep>true</resolveSystemDep>
+				<resolveTransitiveDep>true</resolveTransitiveDep>
 			</configuration>
 		</execution>
 	</executions>
