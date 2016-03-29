@@ -111,7 +111,7 @@ target/my-app-1.0-cap.jar
 
 To perform the resolution at runtime, the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory if any dependencies (or the app itself) needs to be resolved at runtime.
 
-To build the ```fat``` capsule without this additional code, make sure none of the ```resolve``` flags are set to true (by default all set to false).
+To build the capsule without this additional code, make sure none of the ```resolve``` flags are set to true (by default all set to false).
 
 Namely these are, ```<resolveAppDep>```, ```<resolveCompileDep>```, ```<resolveRuntimeDep>```, ```<resolveSystemDep>```.
 
@@ -594,8 +594,12 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<outputDir> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
-* `<includeTransitiveDep> (Optional)`: Specify whether transitive dependencies should also be embedded.  Default is true.
-* `<includeOptionalDep> (Optional)`: Specify whether optional dependencies should also be embedded. Only applicable for `fat` capsules, and the default is true.
+* `<includeApp> (Optional)`: Specify whether the app itself should be embedded. Default is true.
+* `<includeCompileDep> (Optional)`: Specify whether compile scope dependencies should be embedded. Default is true.
+* `<includeRuntimeDep> (Optional)`: Specify whether runtime scope dependencies should be embedded. Default is true.
+* `<includeSystemDep> (Optional)`: Specify whether system scope dependencies should be embedded. Default is false.
+* `<includeTransitiveDep> (Optional)`: Specify whether transitive dependencies should also be embedded. Default is true.
+* `<includeOptionalDep> (Optional)`: Specify whether optional dependencies should also be embedded. The default is false.
 * `<resolveApp> (Optional)`: Specifies whether the app should be resolved at launch. The default is false.
 * `<resolveCompileDep> (Optional)`: Specifies whether the compile scoped dependencies should be resolved at launch. The default is false.
 * `<resolveRuntimeDep> (Optional)`: Specifies whether the runtime scoped dependencies should be resolved at launch. The default is false.
