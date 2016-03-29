@@ -107,6 +107,81 @@ By default, the plugin will build a capsule that includes the app, and all its d
 target/my-app-1.0-cap.jar
 ```
 
+The plugin is flexible in what it can dump inside the capsule jar, as you have the following options:
+
+```
+<includeApp>true</includeApp>
+<includeCompileDep>true</includeCompileDep>
+<includeRuntimeDep>true</includeRuntimeDep>
+<includeSystemDep>false</includeSystemDep>
+<includeTransitiveDep>true</includeTransitiveDep>
+<includeOptionalDep>false</includeOptionalDep>
+```
+
+These ```includeXYZ``` flags essentially tell the plugin what to include in the jar. Of course if there are any of these that you exclude from the capsule jar, and in turn they are needed for the launch, then runtime resolution will be needed (see next section).
+
+The above settings are the defaults.
+
+So if a ```thin``` capsule is desired, it can be done like so:
+
+```
+<plugin>
+	<groupId>com.github.chrischristo</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
+	<executions>
+		<execution>
+			<goals>
+				<goal>build</goal>
+			</goals>
+			<configuration>
+				<appClass>hello.HelloWorld</appClass>
+				<includeApp>true</includeApp>
+        <includeCompileDep>false</includeCompileDep>
+        <includeRuntimeDep>false</includeRuntimeDep>
+        <includeSystemDep>false</includeSystemDep>
+        <includeTransitiveDep>false</includeTransitiveDep>
+        <resolveCompileDep>true</resolveCompileDep>
+        <resolveRuntimeDep>true</resolveRuntimeDep>
+        <resolveSystemDep>true</resolveSystemDep>
+        <resolveTransitiveDep>true</resolveTransitiveDep>
+			</configuration>
+		</execution>
+	</executions>
+</plugin>
+```
+
+And likewise if an ```empty``` capsule is desired, it can be done like so:
+
+```
+<plugin>
+	<groupId>com.github.chrischristo</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
+	<executions>
+		<execution>
+			<goals>
+				<goal>build</goal>
+			</goals>
+			<configuration>
+				<appClass>hello.HelloWorld</appClass>
+				<includeApp>false</includeApp>
+        <includeCompileDep>false</includeCompileDep>
+        <includeRuntimeDep>false</includeRuntimeDep>
+        <includeSystemDep>false</includeSystemDep>
+        <includeTransitiveDep>false</includeTransitiveDep>
+        <resolveApp>true</resolveApp>
+        <resolveCompileDep>true</resolveCompileDep>
+        <resolveRuntimeDep>true</resolveRuntimeDep>
+        <resolveSystemDep>true</resolveSystemDep>
+        <resolveTransitiveDep>true</resolveTransitiveDep>
+			</configuration>
+		</execution>
+	</executions>
+</plugin>
+```
+
+
 ## Runtime Resolution
 
 To perform the resolution at runtime, the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory if any dependencies (or the app itself) needs to be resolved at runtime.
