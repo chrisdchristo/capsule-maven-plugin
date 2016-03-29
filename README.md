@@ -200,7 +200,7 @@ So if resolution is needed at runtime for any of these options, then it needs to
 </configuration>
 ```
 
-## Excluding dependencies
+## Excluding Dependencies
 
 Certain scenarios desire the case where only certain dependencies are included in the built capsule (and the others resolved at runtime).
 
@@ -229,7 +229,7 @@ And then mark the necessary flags:
 
 So the above will not include the dependencies marked with ```runtime``` scope, however it will resolve them at launch.
 
-### Including Optional dependencies
+### Including Optional Dependencies
 
 By default, the plugin will not embed dependencies marked `<optional>true</optional>`.
 
@@ -253,7 +253,7 @@ To include optional dependencies in the capsule, you simply need to turn on a fl
 </configuration>
 ```
 
-### Excluding Transitive dependencies
+### Excluding Transitive Dependencies
 
 By default, the plugin will embed the dependencies and their transitive dependencies (i.e dependencies of dependencies), as they will also be required to run the app.
 
@@ -698,23 +698,26 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<appClass>hello.HelloWorld</appClass>
 
 		<outputDir>target</outputDir>
-    <caplets>MyCapsule MyCapsule2</caplets>
-    <chmod>true</chmod>
-    <trampoline>true</trampoline>
-    <includeApp>true</includeApp>
-    <includeCompileDep>false</includeCompileDep>
-    <includeRuntimeDep>true</includeRuntimeDep>
-    <includeSystemDep>false</includeSystemDep>
-    <includeTransitiveDep>true</includeTransitiveDep>
-    <includeOptionalDep>true</includeOptionalDep>
-    <resolveApp>false</resolveApp>
-    <resolveCompileDep>false</resolveCompileDep>
-    <resolveRuntimeDep>false</resolveRuntimeDep>
-    <resolveSystemDep>false</resolveSystemDep>
-    <resolveTransitiveDep>false</resolveTransitiveDep>
+		<caplets>MyCapsule MyCapsule2</caplets>
 
-    <execPluginConfig>root</execPluginConfig>
-    <customDescriptor>-cap</customDescriptor>
+		<chmod>true</chmod>
+		<trampoline>true</trampoline>
+
+		<includeApp>true</includeApp>
+		<includeCompileDep>false</includeCompileDep>
+		<includeRuntimeDep>true</includeRuntimeDep>
+		<includeSystemDep>false</includeSystemDep>
+		<includeTransitiveDep>true</includeTransitiveDep>
+		<includeOptionalDep>true</includeOptionalDep>
+		
+		<resolveApp>false</resolveApp>
+		<resolveCompileDep>false</resolveCompileDep>
+		<resolveRuntimeDep>false</resolveRuntimeDep>
+		<resolveSystemDep>false</resolveSystemDep>
+		<resolveTransitiveDep>false</resolveTransitiveDep>
+
+		<execPluginConfig>root</execPluginConfig>
+		<customDescriptor>-cap</customDescriptor>
 
 
 		<properties>
