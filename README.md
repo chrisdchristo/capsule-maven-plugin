@@ -709,7 +709,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<includeSystemDep>false</includeSystemDep>
 		<includeTransitiveDep>true</includeTransitiveDep>
 		<includeOptionalDep>true</includeOptionalDep>
-		
+
 		<resolveApp>false</resolveApp>
 		<resolveCompileDep>false</resolveCompileDep>
 		<resolveRuntimeDep>false</resolveRuntimeDep>

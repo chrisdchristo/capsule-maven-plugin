@@ -1,8 +1,6 @@
 package capsule;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Exclusion;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.AbstractMojo;
@@ -41,10 +39,10 @@ import java.util.zip.ZipException;
 	= ResolutionScope.RUNTIME_PLUS_SYSTEM)
 public class CapsuleMojo extends AbstractMojo {
 
-	public String LOG_PREFIX = "[Capsule] ";
+	public String LOG_PREFIX = "[CapsuleMavenPlugin] ";
 
 	public static final String DEFAULT_CAPSULE_VERSION = "1.0.1";
-	public static final String DEFAULT_CAPSULE_MAVEN_VERSION = "1.0.0";
+	public static final String DEFAULT_CAPSULE_MAVEN_VERSION = "1.0.1";
 
 	public static final String CAPSULE_GROUP = "co.paralleluniverse";
 	public static final String DEFAULT_CAPSULE_NAME = "Capsule";
@@ -92,6 +90,8 @@ public class CapsuleMojo extends AbstractMojo {
 
 	@Parameter(property = "capsule.includeApp", defaultValue = "true")
 	private boolean includeApp = true;
+	@Parameter(property = "capsule.includeTransitiveDep", defaultValue = "true")
+	private boolean includeTransitiveDep = true;
 	@Parameter(property = "capsule.includeCompileDep", defaultValue = "true")
 	private boolean includeCompileDep = true;
 	@Parameter(property = "capsule.includeRuntimeDep", defaultValue = "true")
@@ -102,11 +102,11 @@ public class CapsuleMojo extends AbstractMojo {
 	private boolean includeSystemDep = false;
 	@Parameter(property = "capsule.includeOptionalDep", defaultValue = "false")
 	private boolean includeOptionalDep = false;
-	@Parameter(property = "capsule.includeTransitiveDep", defaultValue = "false")
-	private boolean includeTransitiveDep = true;
 
 	@Parameter(property = "capsule.resolveApp", defaultValue = "false")
 	private boolean resolveApp = false;
+	@Parameter(property = "capsule.resolveTransitiveDep", defaultValue = "false")
+	private boolean resolveTransitiveDep = false;
 	@Parameter(property = "capsule.resolveCompileDep", defaultValue = "false")
 	private boolean resolveCompileDep = false;
 	@Parameter(property = "capsule.resolveRuntimeDep", defaultValue = "false")
@@ -117,8 +117,6 @@ public class CapsuleMojo extends AbstractMojo {
 	private boolean resolveSystemDep = false;
 	@Parameter(property = "capsule.resolveOptionalDep", defaultValue = "false")
 	private boolean resolveOptionalDep = false;
-	@Parameter(property = "capsule.resolveTransitiveDep", defaultValue = "false")
-	private boolean resolveTransitiveDep = false;
 
 	@Parameter(property = "capsule.chmod", defaultValue = "false")
 	private String chmod = null;
@@ -146,6 +144,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private File resolvedCapsuleProjectFile = null;
 	private File resolvedCapsuleMavenProjectFile = null;
 	private String outputName;
+
+	private final Set<String> embeddedArtifacts = new HashSet<>();
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -261,8 +261,9 @@ public class CapsuleMojo extends AbstractMojo {
 			if (!success) throw new MojoFailureException("Failed to build outputDir path");
 		}
 
-		info("Using Capsule Version: " + capsuleVersion);
-		debug("Output Directory: " + outputDir.toString());
+		info("[Capsule Version]: " + capsuleVersion);
+		info("[Output Directory]: " + outputDir.toString());
+		info("[Build Info]: " + getBuildInfoString());
 
 		try {
 			//			if (buildEmpty) buildEmpty();
@@ -283,7 +284,10 @@ public class CapsuleMojo extends AbstractMojo {
 
 		if (!jarFile.exists()) {
 			final JarOutputStream jarStream = new JarOutputStream(new FileOutputStream(jarFile));
-			info(jarFile.getName());
+			info("[Capsule Jar File]: " + jarFile.getName());
+
+			// add manifest entries
+			addManifest(jarStream);
 
 			// add Capsule.class
 			addCapsuleClass(jarStream);
@@ -299,9 +303,6 @@ public class CapsuleMojo extends AbstractMojo {
 
 			// add the dependencies as embedded jars
 			addDependencies(jarStream);
-
-			// add manifest entries
-			addManifest(jarStream);
 
 			// add some files and folders to the capsule from filesets and dependencysets
 			addFileSets(jarStream);
@@ -319,209 +320,11 @@ public class CapsuleMojo extends AbstractMojo {
 		addTrampolineCopy(jarFile);
 
 		// attach the capsule as a maven artifact
-		info("Attached capsule artifact to maven");
+		info("[Maven Artifact]: Attached capsule artifact to maven (" + jarFile.getName() + ").");
 		helper.attachArtifact(project, jarFile, "capsule");
 	}
 
 	// BUILD PROCESS
-
-	private void addCapsuleClass(final JarOutputStream jar) throws IOException {
-		final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsule()));
-
-		JarEntry entry;
-		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
-			if (entry.getName().equals(DEFAULT_CAPSULE_CLASS))
-				addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(IOUtil.toByteArray(capsuleJarInputStream)), jar);
-	}
-
-	private void addCapletClasses(final JarOutputStream jar) throws IOException {
-		if (caplets != null && !caplets.isEmpty()) {
-			for (final Map.Entry<String, File> caplet : this.capletFiles.entrySet()) {
-				final String path = caplet.getValue().getPath();
-				addToJar(path.substring(path.indexOf("classes") + 8), new FileInputStream(caplet.getValue()), jar);
-			}
-		}
-	}
-
-	private void addMavenCapletClasses(final JarOutputStream jar) throws IOException {
-		if (resolveApp || resolveCompileDep || resolveRuntimeDep || resolveProvidedDep || resolveSystemDep) {
-
-			// get capsule maven classes
-			final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsuleMaven()));
-
-			JarEntry entry;
-			while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) {
-				if (entry.getName().contains("capsule") || entry.getName().equals(DEFAULT_CAPSULE_MAVEN_CLASS)) {
-					addToJar(entry.getName(), new ByteArrayInputStream(IOUtil.toByteArray(capsuleJarInputStream)), jar);
-				}
-			}
-		}
-	}
-
-	private void addApp(final JarOutputStream jar) throws IOException {
-		if (includeApp) {
-			try {
-				final File mainJarFile = new File(this.buildDir, this.finalName + ".jar");
-				addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jar);
-			} catch (final FileNotFoundException e) { // if project jar wasn't built (perhaps the mvn package wasn't run, and only the mvn compile was run)
-				// add compiled project classes instead
-				warn("Couldn't add main jar file to fat capsule, adding the project classes directly instead.");
-
-				final File classesDir = new File(this.buildDir, "classes");
-				Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
-					@Override
-					public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
-						if (!attrs.isDirectory() && !path.endsWith(".DS_Store") && !path.endsWith("MANIFEST.MF")) {
-							addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(path.toFile()), jar);
-							getLog().debug("Adding Compile Project Class to Capsule: [" + path.toFile().getPath() + "]");
-						}
-						return FileVisitResult.CONTINUE;
-					}
-				});
-			}
-		}
-	}
-
-	private void addDependencies(final JarOutputStream jar) throws IOException {
-
-		// go through dependencies
-//		final Set<Artifact> artifacts = includeTransitiveDep ? getAllDependencies() : getDirectDependencies();
-//
-//		for (final Artifact artifact : artifacts) {
-//
-//			final String scope = artifact.getScope() == null || artifact.getScope().isEmpty() ? "compile" : artifact.getScope();
-//
-//			boolean optionalMatch = true;
-//			if (artifact.isOptional()) optionalMatch = includeOptionalDep;
-//
-//			// check artifact has a file
-//			if (artifact.getFile() == null)
-//				warn("Dependency[" + getCoords(artifact) + "] file not found, thus will not be added to capsule jar.");
-//
-//				// check against requested scopes
-//			else if (includeCompileDep && scope.equals("compile") && optionalMatch)
-//				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
-//			else if (includeRuntimeDep && scope.equals("runtime") && optionalMatch)
-//				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
-//			else if (includeProvidedDep && scope.equals("provided") && optionalMatch)
-//				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
-//			else if (includeSystemDep && scope.equals("system") && optionalMatch)
-//				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
-//			else
-//				debug("Dependency[" + getCoords(artifact) + "] skipped, as it does not match any required scope (" + artifact.getScope() + ")");
-//		}
-
-		final DefaultArtifact defaultArtifact = new DefaultArtifact(getCoords(project.getArtifact()));
-		final CollectRequest request = new CollectRequest(new org.eclipse.aether.graph.Dependency(defaultArtifact, null), remoteRepos);
-		final CollectResult result;
-		try {
-			result = repoSystem.collectDependencies(repoSession, request);
-		} catch (DependencyCollectionException e) {
-			e.printStackTrace();
-			throw new IOException("Failed to collect dependencies");
-		}
-		result.getRoot().accept(new DependencyVisitor() {
-			final AtomicInteger level = new AtomicInteger();
-
-			public boolean visitEnter(final DependencyNode node) {
-				final int indentLength = level.getAndIncrement();
-
-				// skip project level
-				if (level.intValue() == 1) return true;
-
-				// only include root level deps
-//				if (!includeTransitiveDep && level.intValue() > 2) return false;
-
-				// get objects
-				final org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
-				final org.eclipse.aether.graph.Dependency dependency = node.getDependency();
-
-				// format scope
-				final String scope = dependency.getScope() == null || dependency.getScope().isEmpty() ? "compile" : dependency.getScope();
-
-				// optional flag
-				boolean optionalMatch = true;
-				if (dependency.isOptional()) optionalMatch = includeOptionalDep;
-
-				// check against requested scopes
-				try {
-
-					File file = artifact.getFile();
-
-					// check artifact has a file
-					if (file == null) {
-						try {
-							file = resolve(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion()).getArtifact().getFile();
-						} catch (final ArtifactResolutionException e) {
-							e.printStackTrace();
-						}
-					}
-
-					if (file == null)
-						warn("Dependency[" + getCoords(artifact) + "] file not found, thus will not be added to capsule jar.");
-
-					else if (includeCompileDep && scope.equals("compile") && optionalMatch)
-						addToJar(file.getName(), new FileInputStream(file), jar);
-					else if (includeRuntimeDep && scope.equals("runtime") && optionalMatch)
-						addToJar(file.getName(), new FileInputStream(file), jar);
-					else if (includeProvidedDep && scope.equals("provided") && optionalMatch)
-						addToJar(file.getName(), new FileInputStream(file), jar);
-					else if (includeSystemDep && scope.equals("system") && optionalMatch)
-						addToJar(file.getName(), new FileInputStream(file), jar);
-					else {
-						debug("Dependency[" + getCoords(artifact) + "] skipped, as it does not match any required scope (" + scope + ") or optional (" + optionalMatch + ")");
-						return false;
-					}
-
-				} catch (final IOException e) {
-					warn("Dependency[" + getCoords(artifact) + "] error getting file.");
-					return false;
-				}
-
-				// print
-				final StringBuilder sb = new StringBuilder();
-				for (int i = 0; i < indentLength; i++) sb.append("  ");
-				info(sb.toString() + "Dependency[" + dependency.getScope() + "][" + getCoords(artifact) + "] added.");
-
-				return true;
-			}
-
-			public boolean visitLeave(DependencyNode node) {
-				level.decrementAndGet();
-				return true;
-			}
-
-		});
-
-		//		try {
-		//			{
-		//				final DefaultRepositorySystemSession repoSessionDefault = MavenRepositorySystemUtils.newSession();
-		//				repoSessionDefault.setLocalRepositoryManager(repoSession.getLocalRepositoryManager());
-		//				repoSessionDefault.setDependencySelector(new DependencySelector() {
-		//					public boolean selectDependency(org.eclipse.aether.graph.Dependency dependency) { System.err.println("select | " + dependency); return
-		// false; }
-		//					public DependencySelector deriveChildSelector(DependencyCollectionContext context) { return this; }
-		//				});
-		////				final DefaultArtifact artifact = new DefaultArtifact("junit", "junit-dep", "", "jar", "4.10");
-		//				org.eclipse.aether.artifact.Artifact defaultArtifact = new DefaultArtifact(getCoords(project.getArtifact()));
-		//				final CollectRequest request = new CollectRequest(new org.eclipse.aether.graph.Dependency(defaultArtifact, null), remoteRepos);
-		//				final CollectResult result = repoSystem.collectDependencies(repoSessionDefault, request);
-		//				result.getRoot().accept(new DependencyVisitor() {
-		//					public boolean visitEnter(DependencyNode node) {
-		//						System.err.println(node.getDependency());
-		//						return true;
-		//					}
-		//					public boolean visitLeave(DependencyNode node) {
-		//						return true;
-		//					}
-		//				});
-		//			}
-		//
-		//		} catch (final Exception e) {
-		//			e.printStackTrace();
-		//		}
-
-	}
 
 	private void addManifest(final JarOutputStream jar) throws IOException {
 		final Manifest manifestBuild = new Manifest();
@@ -531,16 +334,21 @@ public class CapsuleMojo extends AbstractMojo {
 		mainAttributes.put(new Attributes.Name("Application-Class"), this.appClass);
 		mainAttributes.put(new Attributes.Name("Application-Name"), this.outputName);
 		mainAttributes.put(new Attributes.Name("Premain-Class"), DEFAULT_CAPSULE_NAME);
-		mainAttributes.put(new Attributes.Name("Build-Info"), getBuildInfoString());
-		//		mainAttributes.put(new Attributes.Name("Artifacts"), getArtifactsString());
-		mainAttributes.put(new Attributes.Name("Dependencies"), getDependencyString());
-		mainAttributes.put(new Attributes.Name("Repositories"), getRepoString());
+//		mainAttributes.put(new Attributes.Name("Build-Info"), getBuildInfoString());
+		mainAttributes.put(new Attributes.Name("Embedded-Artifacts"), getArtifactString());
+		final String dependencyString = getDependencyString();
+		if (!dependencyString.isEmpty())
+			mainAttributes.put(new Attributes.Name("Dependencies"), dependencyString);
+
+				final String repoString = getRepoString().trim();
+		if (!repoString.isEmpty())
+			mainAttributes.put(new Attributes.Name("Repositories"), repoString);
 
 		// add MavenCapsule caplet (if needed) & others specified by user
 		if (resolveApp || resolveCompileDep || resolveRuntimeDep || resolveProvidedDep || resolveSystemDep)
-			mainAttributes.put(new Attributes.Name("Caplets"), DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets);
-		else
-			mainAttributes.put(new Attributes.Name("Caplets"), this.caplets); // add caplets with maven caplet
+			mainAttributes.put(new Attributes.Name("Caplets"), (DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets).trim());
+		else if (this.caplets != null && !this.caplets.isEmpty())
+			mainAttributes.put(new Attributes.Name("Caplets"), this.caplets.trim());
 
 		// add properties
 		final String propertiesString = getSystemPropertiesString();
@@ -561,10 +369,6 @@ public class CapsuleMojo extends AbstractMojo {
 				}
 			}
 		}
-
-		// caplets
-		if (this.caplets != null && !this.caplets.isEmpty())
-			mainAttributes.put(new Attributes.Name("Caplets"), this.caplets);
 
 		// custom user defined manifest entries (will override any before)
 		if (this.manifest != null)
@@ -608,6 +412,201 @@ public class CapsuleMojo extends AbstractMojo {
 		addToJar(JarFile.MANIFEST_NAME, manifestInputStream, jar);
 	}
 
+	private void addCapsuleClass(final JarOutputStream jar) throws IOException {
+		final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsule()));
+
+		JarEntry entry;
+		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
+			if (entry.getName().equals(DEFAULT_CAPSULE_CLASS))
+				addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(IOUtil.toByteArray(capsuleJarInputStream)), jar);
+	}
+
+	private void addCapletClasses(final JarOutputStream jar) throws IOException {
+		if (caplets != null && !caplets.isEmpty()) {
+			for (final Map.Entry<String, File> caplet : this.capletFiles.entrySet()) {
+				final String path = caplet.getValue().getPath();
+				addToJar(path.substring(path.indexOf("classes") + 8), new FileInputStream(caplet.getValue()), jar);
+				info("\t[Caplet] Embedded Caplet class " + caplet.getKey() + " from " + caplet.getValue());
+			}
+		}
+	}
+
+	private void addMavenCapletClasses(final JarOutputStream jar) throws IOException {
+		if (resolveApp || resolveCompileDep || resolveRuntimeDep || resolveProvidedDep || resolveSystemDep) {
+
+			// get capsule maven classes
+			final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsuleMaven()));
+
+			JarEntry entry;
+			while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) {
+				if (entry.getName().contains("capsule") || entry.getName().equals(DEFAULT_CAPSULE_MAVEN_CLASS)) {
+					addToJar(entry.getName(), new ByteArrayInputStream(IOUtil.toByteArray(capsuleJarInputStream)), jar);
+				}
+			}
+			info("\t[Maven Caplet] Embedded Maven Caplet classes v" + capsuleMavenVersion + " (so capsule can resolve at launch)");
+		}
+	}
+
+	private void addApp(final JarOutputStream jar) throws IOException {
+		if (includeApp) {
+			try {
+				final File mainJarFile = new File(this.buildDir, this.finalName + ".jar");
+				addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jar);
+				info("\t[App]: App jar embedded (" + mainJarFile.getName() + ")");
+			} catch (final FileNotFoundException e) { // if project jar wasn't built (perhaps the mvn package wasn't run, and only the mvn compile was run)
+				// add compiled project classes instead
+				warn("\t[App]: Couldn't add main jar file to fat capsule, adding the project classes directly instead.");
+
+				final File classesDir = new File(this.buildDir, "classes");
+				Files.walkFileTree(classesDir.toPath(), new SimpleFileVisitor<Path>() {
+					@Override
+					public FileVisitResult visitFile(final Path path, final BasicFileAttributes attrs) throws IOException {
+						if (!attrs.isDirectory() && !path.endsWith(".DS_Store") && !path.endsWith("MANIFEST.MF")) {
+							addToJar(path.toString().substring(path.toString().indexOf("classes") + 8), new FileInputStream(path.toFile()), jar);
+							debug("\t\t[App]: Adding Compile Project Class to Capsule: [" + path.toFile().getPath() + "]");
+						}
+						return FileVisitResult.CONTINUE;
+					}
+				});
+				info("\t[App]: App class files embedded.");
+			}
+		} else if (resolveApp) {
+			info("\t[App]: App jar NOT embedded and marked to be resolved at launch.");
+		} else {
+			warn("\t[App]: App jar NOT embedded and NOT marked to be resolved at launch.");
+		}
+	}
+
+	private void addDependencies(final JarOutputStream jar) throws IOException {
+
+		// go through dependencies
+		//		final Set<Artifact> artifacts = includeTransitiveDep ? getAllDependencies() : getDirectDependencies();
+		//
+		//		for (final Artifact artifact : artifacts) {
+		//
+		//			final String scope = artifact.getScope() == null || artifact.getScope().isEmpty() ? "compile" : artifact.getScope();
+		//
+		//			boolean optionalMatch = true;
+		//			if (artifact.isOptional()) optionalMatch = includeOptionalDep;
+		//
+		//			// check artifact has a file
+		//			if (artifact.getFile() == null)
+		//				warn("Dependency[" + getCoords(artifact) + "] file not found, thus will not be added to capsule jar.");
+		//
+		//				// check against requested scopes
+		//			else if (includeCompileDep && scope.equals("compile") && optionalMatch)
+		//				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
+		//			else if (includeRuntimeDep && scope.equals("runtime") && optionalMatch)
+		//				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
+		//			else if (includeProvidedDep && scope.equals("provided") && optionalMatch)
+		//				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
+		//			else if (includeSystemDep && scope.equals("system") && optionalMatch)
+		//				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
+		//			else
+		//				debug("Dependency[" + getCoords(artifact) + "] skipped, as it does not match any required scope (" + artifact.getScope() + ")");
+		//		}
+
+		collect().getRoot().accept(new DependencyVisitor() {
+			final AtomicInteger level = new AtomicInteger();
+
+			public boolean visitEnter(final DependencyNode node) {
+				final int indentLength = level.getAndIncrement();
+
+				// skip project level
+				if (level.intValue() == 1) return true;
+
+				// only include root level deps
+				//				if (!includeTransitiveDep && level.intValue() > 2) return false;
+
+				// get objects
+				final org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
+				final org.eclipse.aether.graph.Dependency dependency = node.getDependency();
+
+				// format scope
+				final String scope = dependency.getScope() == null || dependency.getScope().isEmpty() ? "compile" : dependency.getScope();
+
+				// optional flag
+				boolean optionalMatch = true;
+				if (dependency.isOptional()) optionalMatch = includeOptionalDep;
+
+				// check against requested scopes
+				try {
+
+					File file = artifact.getFile();
+
+					// check artifact has a file
+					if (file == null) {
+						try {
+							file = resolve(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion()).getArtifact().getFile();
+						} catch (final ArtifactResolutionException e) {
+							e.printStackTrace();
+						}
+					}
+
+					if (file == null)
+						warn("\t\t[Dependency][" + getCoords(artifact) + "(" + scope + ")] file not found, thus will not be added to capsule jar.");
+
+					else if (includeCompileDep && scope.equals("compile") && optionalMatch)
+						addToJar(file.getName(), new FileInputStream(file), jar);
+					else if (includeRuntimeDep && scope.equals("runtime") && optionalMatch)
+						addToJar(file.getName(), new FileInputStream(file), jar);
+					else if (includeProvidedDep && scope.equals("provided") && optionalMatch)
+						addToJar(file.getName(), new FileInputStream(file), jar);
+					else if (includeSystemDep && scope.equals("system") && optionalMatch)
+						addToJar(file.getName(), new FileInputStream(file), jar);
+					else {
+						debug("\t\t[Dependency][" + getCoords(artifact) + "(" + scope + ")] skipped, as it does not match any required scope");
+						return false;
+					}
+				} catch (final IOException e) {
+					warn("\t\t[Dependency][" + getCoords(artifact) + "(" + scope + ")] error getting file.");
+					return false;
+				}
+
+				// print
+				final StringBuilder sb = new StringBuilder();
+				for (int i = 0; i < indentLength; i++) sb.append("   ");
+				info("\t" + sb.toString() + "\\--[Dependency][" + getCoords(artifact) + "(" + scope + ")] embedded in capsule.");
+
+				return true;
+			}
+
+			public boolean visitLeave(DependencyNode node) {
+				level.decrementAndGet();
+				return true;
+			}
+		});
+
+		//		try {
+		//			{
+		//				final DefaultRepositorySystemSession repoSessionDefault = MavenRepositorySystemUtils.newSession();
+		//				repoSessionDefault.setLocalRepositoryManager(repoSession.getLocalRepositoryManager());
+		//				repoSessionDefault.setDependencySelector(new DependencySelector() {
+		//					public boolean selectDependency(org.eclipse.aether.graph.Dependency dependency) { System.err.println("select | " + dependency); return
+		// false; }
+		//					public DependencySelector deriveChildSelector(DependencyCollectionContext context) { return this; }
+		//				});
+		////				final DefaultArtifact artifact = new DefaultArtifact("junit", "junit-dep", "", "jar", "4.10");
+		//				org.eclipse.aether.artifact.Artifact defaultArtifact = new DefaultArtifact(getCoords(project.getArtifact()));
+		//				final CollectRequest request = new CollectRequest(new org.eclipse.aether.graph.Dependency(defaultArtifact, null), remoteRepos);
+		//				final CollectResult result = repoSystem.collectDependencies(repoSessionDefault, request);
+		//				result.getRoot().accept(new DependencyVisitor() {
+		//					public boolean visitEnter(DependencyNode node) {
+		//						System.err.println(node.getDependency());
+		//						return true;
+		//					}
+		//					public boolean visitLeave(DependencyNode node) {
+		//						return true;
+		//					}
+		//				});
+		//			}
+		//
+		//		} catch (final Exception e) {
+		//			e.printStackTrace();
+		//		}
+
+	}
+
 	private void addFileSets(final JarOutputStream jar) throws IOException {
 		if (fileSets == null) return;
 
@@ -617,7 +616,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 				// warn & skip if not directory
 				if (!directory.isDirectory()) {
-					warn("Attempted to include file from non-directory [" + directory.getAbsolutePath() + "], skipping...");
+					warn("[FileSet] Attempted to include file from non-directory [" + directory.getAbsolutePath() + "], skipping...");
 					continue;
 				}
 
@@ -626,6 +625,7 @@ public class CapsuleMojo extends AbstractMojo {
 				for (final String include : fileSet.includes) {
 					final FileInputStream fin = new FileInputStream(new File(directory, include));
 					addToJar(outputDirectory + include, fin, jar);
+					info("\t[FileSet]: Embedded " + outputDirectory + include + " from " + directory);
 				}
 			}
 		}
@@ -654,8 +654,8 @@ public class CapsuleMojo extends AbstractMojo {
 							for (final String include : dependencySet.includes) {
 								final ZipEntry entry = jarFile.getEntry(include);
 								if (entry != null) {
-									info("DependencySet - Adding " + include + " from " + artifact.getFile() + " to " + outputDirectory);
 									addToJar(outputDirectory + include, jarFile.getInputStream(entry), jar);
+									info("\t[DependencySet]: Embedded " + outputDirectory + include + " from " + artifact.getFile());
 								} else {
 									warn(include + " not found in " + artifact.getFile());
 								}
@@ -664,24 +664,24 @@ public class CapsuleMojo extends AbstractMojo {
 							// else add whole file
 						} else {
 							if (!dependencySet.unpack) {
-								info("DependencySet - Adding " + artifact.getFile().getName() + " to " + outputDirectory);
+								info("\t[DependencySet]: Adding " + artifact.getFile().getName() + " to " + outputDirectory);
 								addToJar(outputDirectory + artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
 							} else {
 								if (artifact.getType() != null && artifact.getType().equals("jar")) {
-									info("DependencySet - Adding (unpacked) " + artifact.getFile().getName() + " to " + outputDirectory);
+									info("\t[DependencySet]: Adding (unpacked) " + artifact.getFile().getName() + " to " + outputDirectory);
 									final Enumeration<JarEntry> entries = jarFile.entries();
 									while (entries.hasMoreElements()) {
 										final JarEntry entry = entries.nextElement();
-										debug("DependencySet - Adding (unpacked) " + outputDirectory + entry.getName());
+										debug("\t\t[DependencySet]: Adding (unpacked) " + outputDirectory + entry.getName());
 										addToJar(outputDirectory + entry.getName(), jarFile.getInputStream(entry), jar);
 									}
 								} else {
-									warn("DependencySet - Cannot unpack " + artifact.getFile().getName() + " as it is not in jar format.");
+									warn("\t[DependencySet]: Cannot unpack " + artifact.getFile().getName() + " as it is not in jar format.");
 								}
 							}
 						}
 					} else {
-						warn("DependencySet - Artifact version mismatch: " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion());
+						warn("\t[DependencySet]: Artifact version mismatch: " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion());
 					}
 				}
 			}
@@ -689,13 +689,17 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private void addChmodCopy(final File jar) throws IOException {
-		if (this.chmod.equals("true") || this.chmod.equals("1"))
-			createExecCopyProcess(jar, EXEC_PREFIX, ".x");
+		if (this.chmod.equals("true") || this.chmod.equals("1")) {
+			final File file = createExecCopyProcess(jar, EXEC_PREFIX, ".x");
+			info("[Capsule CHMOD]: " + file.getName());
+		}
 	}
 
 	private void addTrampolineCopy(final File jar) throws IOException {
-		if (this.trampoline.equals("true") || this.trampoline.equals("1"))
-			createExecCopyProcess(jar, EXEC_TRAMPOLINE_PREFIX, ".tx");
+		if (this.trampoline.equals("true") || this.trampoline.equals("1")) {
+			final File file = createExecCopyProcess(jar, EXEC_TRAMPOLINE_PREFIX, ".tx");
+			info("[Capsule Trampoline]: " + file.getName());
+		}
 	}
 
 	// STRINGS
@@ -726,33 +730,131 @@ public class CapsuleMojo extends AbstractMojo {
 		return repoList.toString();
 	}
 
-	private String getDependencyString() {
-		final StringBuilder dependenciesList = new StringBuilder();
+	private String getArtifactString() throws IOException {
+		final StringBuilder artifactList = new StringBuilder();
 
-		// go through dependencies
-		for (final Object artifactObject : project.getDependencies()) {
-			final Dependency artifact = (Dependency) artifactObject;
+		if (includeApp) artifactList.append(getCoords(project.getArtifact()));
 
-			final String scope = artifact.getScope() == null || artifact.getScope().isEmpty() ? "compile" : artifact.getScope();
+		collect().getRoot().accept(new DependencyVisitor() {
+			final AtomicInteger level = new AtomicInteger();
 
-			boolean optionalMatch = true;
-			if (artifact.isOptional()) optionalMatch = resolveOptionalDep;
+			public boolean visitEnter(final DependencyNode node) {
+				final int indentLength = level.getAndIncrement();
 
-			// ignore capsule jar
-			if (artifact.getGroupId().equalsIgnoreCase(CAPSULE_GROUP) && artifact.getArtifactId().equalsIgnoreCase(DEFAULT_CAPSULE_NAME))
-				continue;
+				// skip project level
+				if (level.intValue() == 1) return true;
+
+				// get objects
+				final org.eclipse.aether.graph.Dependency dependency = node.getDependency();
+
+				// format scope
+				final String scope = dependency.getScope() == null || dependency.getScope().isEmpty() ? "compile" : dependency.getScope();
+
+				// optional flag
+				boolean optionalMatch = true;
+				if (dependency.isOptional()) optionalMatch = resolveOptionalDep;
 
 				// check against requested scopes
-			else if (resolveCompileDep && scope.equals("compile") && optionalMatch)
-				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
-			else if (resolveRuntimeDep && scope.equals("runtime") && optionalMatch)
-				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
-			else if (resolveProvidedDep && scope.equals("provided") && optionalMatch)
-				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
-			else if (resolveSystemDep && scope.equals("system") && optionalMatch)
-				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
-		}
 
+				if (includeCompileDep && scope.equals("compile") && optionalMatch)
+					artifactList.append(getCoordsWithExclusions(dependency)).append(" ");
+				else if (includeRuntimeDep && scope.equals("runtime") && optionalMatch)
+					artifactList.append(getCoordsWithExclusions(dependency)).append(" ");
+				else if (includeProvidedDep && scope.equals("provided") && optionalMatch)
+					artifactList.append(getCoordsWithExclusions(dependency)).append(" ");
+				else if (includeSystemDep && scope.equals("system") && optionalMatch)
+					artifactList.append(getCoordsWithExclusions(dependency)).append(" ");
+				else
+					return false;
+
+				return true;
+			}
+
+			public boolean visitLeave(DependencyNode node) {
+				level.decrementAndGet();
+				return true;
+			}
+		});
+
+		return artifactList.toString();
+	}
+
+	private String getDependencyString() throws IOException {
+		final StringBuilder dependenciesList = new StringBuilder();
+
+		collect().getRoot().accept(new DependencyVisitor() {
+			final AtomicInteger level = new AtomicInteger();
+
+			public boolean visitEnter(final DependencyNode node) {
+				final int indentLength = level.getAndIncrement();
+
+				// skip project level
+				if (level.intValue() == 1) return true;
+
+				// get objects
+				final org.eclipse.aether.graph.Dependency dependency = node.getDependency();
+
+				// format scope
+				final String scope = dependency.getScope() == null || dependency.getScope().isEmpty() ? "compile" : dependency.getScope();
+
+				// optional flag
+				boolean optionalMatch = true;
+				if (dependency.isOptional()) optionalMatch = resolveOptionalDep;
+
+				// check against requested scopes
+
+				if (resolveCompileDep && scope.equals("compile") && optionalMatch)
+					dependenciesList.append(getCoordsWithExclusions(dependency)).append(" ");
+				else if (resolveRuntimeDep && scope.equals("runtime") && optionalMatch)
+					dependenciesList.append(getCoordsWithExclusions(dependency)).append(" ");
+				else if (resolveProvidedDep && scope.equals("provided") && optionalMatch)
+					dependenciesList.append(getCoordsWithExclusions(dependency)).append(" ");
+				else if (resolveSystemDep && scope.equals("system") && optionalMatch)
+					dependenciesList.append(getCoordsWithExclusions(dependency)).append(" ");
+				else {
+					debug("\t\t[Dependency][" + getCoordsWithExclusions(dependency) + "(" + scope + ")] skipped, as it does not match any required scope");
+					return false;
+				}
+
+				// print
+				final StringBuilder sb = new StringBuilder();
+				for (int i = 0; i < indentLength; i++) sb.append("   ");
+				info("\t" + sb.toString() + "\\--[Dependency][" + getCoordsWithExclusions(dependency) + "(" + scope + ")] added to manifest Dependencies to be " +
+					"resolved at launch.");
+
+				return true;
+			}
+
+			public boolean visitLeave(DependencyNode node) {
+				level.decrementAndGet();
+				return true;
+			}
+		});
+
+		// go through dependencies
+		//		for (final Object artifactObject : project.getDependencies()) {
+		//			final Dependency artifact = (Dependency) artifactObject;
+		//
+		//			final String scope = artifact.getScope() == null || artifact.getScope().isEmpty() ? "compile" : artifact.getScope();
+		//
+		//			boolean optionalMatch = true;
+		//			if (artifact.isOptional()) optionalMatch = resolveOptionalDep;
+		//
+		//			// ignore capsule jar
+		//			if (artifact.getGroupId().equalsIgnoreCase(CAPSULE_GROUP) && artifact.getArtifactId().equalsIgnoreCase(DEFAULT_CAPSULE_NAME))
+		//				continue;
+		//
+		//				// check against requested scopes
+		//			else if (resolveCompileDep && scope.equals("compile") && optionalMatch)
+		//				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
+		//			else if (resolveRuntimeDep && scope.equals("runtime") && optionalMatch)
+		//				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
+		//			else if (resolveProvidedDep && scope.equals("provided") && optionalMatch)
+		//				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
+		//			else if (resolveSystemDep && scope.equals("system") && optionalMatch)
+		//				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
+		//		}
+		//
 		return dependenciesList.toString();
 	}
 
@@ -780,14 +882,16 @@ public class CapsuleMojo extends AbstractMojo {
 	//		return coords.toString();
 	//	}
 
-	private String getCoordsWithExclusions(final Dependency dependency) {
-		final StringBuilder coords = new StringBuilder(dependency.getGroupId() + ":" + dependency.getArtifactId() + ":" + dependency.getVersion());
+	private String getCoordsWithExclusions(final org.eclipse.aether.graph.Dependency dependency) {
+		final StringBuilder coords = new StringBuilder(dependency.getArtifact().getGroupId() + ":" + dependency.getArtifact().getArtifactId() + ":" + dependency
+			.getArtifact().getVersion());
 		if (dependency.getExclusions().size() > 0) {
 			final StringBuilder exclusionsList = new StringBuilder();
-			for (int i = 0; i < dependency.getExclusions().size(); i++) {
-				final Exclusion exclusion = dependency.getExclusions().get(i);
+			int i = 0;
+			for (final org.eclipse.aether.graph.Exclusion exclusion : dependency.getExclusions()) {
 				if (i > 0) exclusionsList.append(",");
 				exclusionsList.append(exclusion.getGroupId()).append(":").append(exclusion.getArtifactId());
+				i++;
 			}
 			coords.append("(").append(exclusionsList.toString()).append(")");
 		}
@@ -825,7 +929,7 @@ public class CapsuleMojo extends AbstractMojo {
 				}
 			}
 		}
-		return propertiesList == null ? null : propertiesList.toString();
+		return propertiesList == null ? null : propertiesList.toString().trim();
 	}
 
 	// JAR & FILE HELPERS
@@ -853,7 +957,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
 		try {
-			debug("Added to Jar: " + name);
+			debug("\t[Added to Jar]: " + name);
 			jar.putNextEntry(new ZipEntry(name));
 			IOUtil.copy(input, jar);
 			jar.closeEntry();
@@ -884,7 +988,6 @@ public class CapsuleMojo extends AbstractMojo {
 		} finally {
 			IOUtil.close(in);
 			IOUtil.close(out);
-			info(x.getName());
 		}
 		return x;
 	}
@@ -923,12 +1026,15 @@ public class CapsuleMojo extends AbstractMojo {
 		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(coords), remoteRepos, null));
 	}
 
-	private Set<Artifact> getDirectDependencies() {
-		return project.getDependencyArtifacts();
-	}
-
-	private Set<Artifact> getAllDependencies() {
-		return project.getArtifacts();
+	private CollectResult collect() throws IOException {
+		final DefaultArtifact defaultArtifact = new DefaultArtifact(getCoords(project.getArtifact()));
+		final CollectRequest request = new CollectRequest(new org.eclipse.aether.graph.Dependency(defaultArtifact, null), remoteRepos);
+		try {
+			return repoSystem.collectDependencies(repoSession, request);
+		} catch (final DependencyCollectionException e) {
+			e.printStackTrace();
+			throw new IOException("Failed to collect dependencies");
+		}
 	}
 
 	// HELPER OBJECTS
@@ -970,293 +1076,16 @@ public class CapsuleMojo extends AbstractMojo {
 	private void info(final String message) { getLog().info(LOG_PREFIX + message); }
 	private void warn(final String message) { getLog().warn(LOG_PREFIX + message); }
 	private void printManifest(final Manifest manifest) {
-		debug("Manifest:");
+		info("\t[Manifest]:");
 		for (final Map.Entry<Object, Object> attr : manifest.getMainAttributes().entrySet()) {
-			debug("\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
+			info("\t\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
 		}
 		for (final Map.Entry<String, Attributes> entry : manifest.getEntries().entrySet()) {
-			debug("Name:" + entry.getKey());
+			info("");
+			info("\t\tName:" + entry.getKey());
 			for (final Map.Entry<Object, Object> attr : entry.getValue().entrySet()) {
-				debug("\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
+				info("\t\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
 			}
 		}
 	}
-
-	// DEPRECATED
-
-	@Deprecated
-	protected enum Type {
-		empty,
-		thin,
-		fat
-	}
-
-	@Deprecated
-	private void attachArtifact(final Type type, final File file) {
-		debug("Attached Artifact capsule-" + type);
-		helper.attachArtifact(project, file, "capsule-" + type);
-	}
-
-	@Deprecated
-	private String getOutputName(final Type type) {
-		String outputName = this.finalName;
-		if (type == Type.empty) outputName += this.customDescriptorEmpty;
-		else if (type == Type.thin) outputName += this.customDescriptorThin;
-		else if (type == Type.fat) outputName += this.customDescriptorFat;
-		return outputName;
-	}
-
-	@Deprecated
-	private boolean buildEmpty = true, buildThin = true, buildFat = true;
-
-	@Deprecated
-	@Parameter(property = "capsule.transitive")
-	private Boolean transitive = true; // whether or not to include transitive dependencies for fat jar
-	@Deprecated
-	@Parameter(property = "capsule.optional")
-	private Boolean optional = true; // whether or not to include optional dependencies for fat jar
-	@Deprecated
-	@Parameter(property = "capsule.resolve")
-	private Boolean resolve = true; // whether or not to resolve dependencies at runtime
-
-	@Deprecated
-	@Parameter(property = "capsule.types")
-	private String types = null;
-	@Deprecated
-	@Parameter(property = "capsule.customDescriptorEmpty", defaultValue = "-capsule-empty")
-	private String customDescriptorEmpty = null;
-	@Deprecated
-	@Parameter(property = "capsule.customDescriptorThin", defaultValue = "-capsule-thin")
-	private String customDescriptorThin = null;
-	@Deprecated
-	@Parameter(property = "capsule.customDescriptorFat", defaultValue = "-capsule-fat")
-	private String customDescriptorFat = null;
-
-	/**
-	 * Build the thin version of the capsule (i.e no dependencies). The dependencies will be resolved at runtime.
-	 */
-	//	@Deprecated
-	//	public final List<File> buildThin() throws IOException {
-	//		final File jarFile = new File(this.outputDir, getOutputName(Type.thin) + ".jar");
-	//
-	//		if (!jarFile.exists()) {
-	//			final JarOutputStream jarStream = new JarOutputStream(new FileOutputStream(jarFile));
-	//			info(jarFile.getName());
-	//
-	//			// add manifest (with Dependencies+Repositories list)
-	//			final Map<String, String> additionalAttributes = new HashMap<>();
-	//			additionalAttributes.put("Dependencies", getDependencyString());
-	//			additionalAttributes.put("Repositories", getRepoString());
-	//			if (resolve) {
-	//				additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet & others
-	//			} else {
-	//				additionalAttributes.put("Caplets", this.caplets); // add caplets
-	//			}
-	//			addManifest(jarStream, additionalAttributes, Type.thin);
-	//
-	//			// add compiled project classes
-	//			addCompiledProjectClasses(jarStream);
-	//
-	//			// add Capsule.class
-	//			addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
-	//
-	//			// add CapsuleMaven classes
-	//			if (resolve) {
-	//				final Map<String, byte[]> capsuleClasses = getAllCapsuleMavenClasses();
-	//				for (final Map.Entry<String, byte[]> entry : capsuleClasses.entrySet())
-	//					addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
-	//			}
-	//
-	//			// add custom capsule class (if exists)
-	//			addCapletClasses(jarStream);
-	//
-	//			// add some files and folders to the capsule
-	//			addFileSets(jarStream);
-	//			addDependencySets(jarStream);
-	//
-	//			IOUtil.close(jarStream);
-	//		} else {
-	//			info("EXISTS - " + jarFile.getName() + " (WILL NOT OVERWRITE)");
-	//		}
-	//
-	//		final List<File> jars = createExecCopy(jarFile);
-	//
-	//		jars.add(jarFile);
-	//
-	//		attachArtifact(Type.thin, jarFile);
-	//
-	//		return jars;
-	//	}
-
-	/**
-	 * Build the fat version of the capsule which includes the dependencies embedded.
-	 */
-	//	@Deprecated
-	//	public final List<File> buildFat() throws IOException {
-	//		final File jarFile = new File(this.outputDir, getOutputName(Type.fat) + ".jar");
-	//
-	//		if (!jarFile.exists()) {
-	//			final JarOutputStream jarStream = new JarOutputStream(new FileOutputStream(jarFile));
-	//			info(jarFile.getName());
-	//
-	//			// add manifest
-	//			final Map<String, String> additionalAttributes = new HashMap<>();
-	//
-	//			// add manifest (with Dependencies+Repositories list)
-	//			additionalAttributes.put("Dependencies", getDependencyString());
-	//			additionalAttributes.put("Repositories", getRepoString());
-	//			if (resolve) {
-	//				additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet & others
-	//			} else {
-	//				additionalAttributes.put("Caplets", this.caplets); // add caplets
-	//			}
-	//			addManifest(jarStream, additionalAttributes, Type.fat);
-	//
-	//			// add main jar
-	//			try {
-	//				final File mainJarFile = new File(this.buildDir, this.finalName + ".jar");
-	//				addToJar(mainJarFile.getName(), new FileInputStream(mainJarFile), jarStream);
-	//			} catch (final FileNotFoundException e) { // if project jar wasn't built (perhaps the mvn package wasn't run, and only the mvn compile was run)
-	//				// add compiled project classes instead
-	//				warn("Couldn't add main jar file to fat capsule, adding the project classes directly instead.");
-	//				this.addCompiledProjectClasses(jarStream);
-	//			}
-	//
-	//			// add dependencies
-	//			if (transitive) {
-	//				for (final Artifact artifact : artifacts) {
-	//					if (artifact.getFile() == null) {
-	//						warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
-	//					} else if (!optional && artifact.isOptional()) {
-	//						warn("Dependency[" + artifact + "] is optional and will not be added to fat jar.");
-	//					} else {
-	//						debug("adding - " + artifact.getFile().getName() + " (With Transitive)");
-	//						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
-	//					}
-	//				}
-	//			} else {
-	//				for (final Object dep : project.getDependencyArtifacts()) {
-	//					final Artifact artifact = (Artifact) dep;
-	//					if (artifact.getFile() == null) {
-	//						warn("Dependency[" + artifact + "] file not found, thus will not be added to fat jar.");
-	//					} else if (!(artifact.getScope().equals("compile") || artifact.getScope().equals("runtime"))) {
-	//						warn("Dependency[" + artifact + "] skipped, as its not compile or runtime scope (" + artifact.getScope() + ")");
-	//					} else if (!optional && artifact.isOptional()) {
-	//						warn("Dependency[" + artifact + "] is optional and will not be added to fat jar.");
-	//					} else {
-	//						debug("adding - " + artifact.getFile().getName());
-	//						addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jarStream);
-	//					}
-	//				}
-	//			}
-	//
-	//			// add Capsule.class
-	//			addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
-	//
-	//			// add CapsuleMaven classes
-	//			if (resolve) { // need maven if we need to download some provided dependencies at runtime
-	//				final Map<String, byte[]> otherCapsuleClasses = getAllCapsuleMavenClasses();
-	//				for (final Map.Entry<String, byte[]> entry : otherCapsuleClasses.entrySet())
-	//					addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
-	//			}
-	//
-	//			// add custom capsule class (if exists)
-	//			addCapletClasses(jarStream);
-	//
-	//			// add some files and folders to the capsule
-	//			addFileSets(jarStream);
-	//			addDependencySets(jarStream);
-	//
-	//			IOUtil.close(jarStream);
-	//		} else {
-	//			info("EXISTS - " + jarFile.getName() + " (WILL NOT OVERWRITE)");
-	//		}
-	//
-	//		final List<File> jars = createExecCopy(jarFile);
-	//
-	//		jars.add(jarFile);
-	//
-	//		attachArtifact(Type.fat, jarFile);
-	//
-	//		return jars;
-	//	}
-
-	/**
-	 * Build the empty version of the capsule, i.e the the app and its dependencies will be downloaded at runtime.
-	 */
-	//	@Deprecated
-	//	public final List<File> buildEmpty() throws IOException {
-	//		final File jarFile = new File(this.outputDir, getOutputName(Type.empty) + ".jar");
-	//
-	//		if (!jarFile.exists()) {
-	//			final JarOutputStream jarStream = new JarOutputStream(new FileOutputStream(jarFile));
-	//			info(jarFile.getName());
-	//
-	//			// add manifest (plus Application+Repositories)
-	//			final Map<String, String> additionalAttributes = new HashMap<>();
-	//			additionalAttributes.put("Application", project.getGroupId() + ":" + project.getArtifactId() + ":" + project.getVersion());
-	//			additionalAttributes.put("Dependencies", getDependencyString());
-	//			additionalAttributes.put("Repositories", getRepoString());
-	//			if (resolve) {
-	//				additionalAttributes.put("Caplets", DEFAULT_CAPSULE_MAVEN_NAME + " " + this.caplets); // add MavenCapsule caplet & others
-	//			} else {
-	//				additionalAttributes.put("Caplets", this.caplets); // add caplets
-	//			}
-	//			addManifest(jarStream, additionalAttributes, Type.empty);
-	//
-	//			// add Capsule.class
-	//			addToJar(DEFAULT_CAPSULE_CLASS, new ByteArrayInputStream(getCapsuleClass()), jarStream);
-	//
-	//			// add CapsuleMaven classes
-	//			if (resolve) {
-	//				final Map<String, byte[]> otherCapsuleClasses = getAllCapsuleMavenClasses();
-	//				for (final Map.Entry<String, byte[]> entry : otherCapsuleClasses.entrySet())
-	//					addToJar(entry.getKey(), new ByteArrayInputStream(entry.getValue()), jarStream);
-	//			}
-	//
-	//			// add custom capsule class (if exists)
-	//			addCapletClasses(jarStream);
-	//
-	//			// add some files and folders to the capsule
-	//			addFileSets(jarStream);
-	//			addDependencySets(jarStream);
-	//
-	//			IOUtil.close(jarStream);
-	//		} else {
-	//			info("EXISTS - " + jarFile.getName() + " (WILL NOT OVERWRITE)");
-	//		}
-	//
-	//		final List<File> jars = createExecCopy(jarFile);
-	//		jars.add(jarFile);
-	//
-	//		attachArtifact(Type.empty, jarFile);
-	//
-	//		return jars;
-	//	}
-
-	//	private String getCoordsWithExclusions(final Artifact artifact) {
-	//		final StringBuilder coords = new StringBuilder(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion());
-	//		if (artifact.getExclusions().size() > 0) {
-	//			final StringBuilder exclusionsList = new StringBuilder();
-	//			for (int i = 0; i < artifact.getExclusions().size(); i++) {
-	//				final Exclusion exclusion = artifact.getExclusions().get(i);
-	//				if (i > 0) exclusionsList.append(",");
-	//				exclusionsList.append(exclusion.getGroupId()).append(":").append(exclusion.getArtifactId());
-	//			}
-	//			coords.append("(").append(exclusionsList.toString()).append(")");
-	//		}
-	//		return coords.toString();
-	//	}
-
-	//	private Map<String, byte[]> getAllCapsuleClasses() throws IOException {
-	//		final JarInputStream capsuleJarInputStream = new JarInputStream(new FileInputStream(resolveCapsule()));
-	//
-	//		final Map<String, byte[]> otherClasses = new HashMap<>();
-	//		JarEntry entry;
-	//		while ((entry = capsuleJarInputStream.getNextJarEntry()) != null) // look for Capsule.class
-	//			if (entry.getName().contains("capsule") || entry.getName().equals(DEFAULT_CAPSULE_CLASS))
-	//				otherClasses.put(entry.getName(), IOUtil.toByteArray(capsuleJarInputStream));
-	//
-	//		return otherClasses;
-	//	}
 }
