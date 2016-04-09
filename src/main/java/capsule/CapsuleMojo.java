@@ -41,8 +41,8 @@ public class CapsuleMojo extends AbstractMojo {
 
 	public String LOG_PREFIX = "[CapsuleMavenPlugin] ";
 
-	public static final String DEFAULT_CAPSULE_VERSION = "1.0.1";
-	public static final String DEFAULT_CAPSULE_MAVEN_VERSION = "1.0.1";
+	public static final String DEFAULT_CAPSULE_VERSION = "1.0.2";
+	public static final String DEFAULT_CAPSULE_MAVEN_VERSION = "1.0.2";
 
 	public static final String CAPSULE_GROUP = "co.paralleluniverse";
 	public static final String DEFAULT_CAPSULE_NAME = "Capsule";
@@ -335,7 +335,9 @@ public class CapsuleMojo extends AbstractMojo {
 		mainAttributes.put(new Attributes.Name("Application-Name"), this.outputName);
 		mainAttributes.put(new Attributes.Name("Premain-Class"), DEFAULT_CAPSULE_NAME);
 //		mainAttributes.put(new Attributes.Name("Build-Info"), getBuildInfoString());
-		mainAttributes.put(new Attributes.Name("Embedded-Artifacts"), getArtifactString());
+		final String artifactsString = getArtifactString();
+		if (!artifactsString.isEmpty())
+			mainAttributes.put(new Attributes.Name("Embedded-Artifacts"), artifactsString);
 		final String dependencyString = getDependencyString();
 		if (!dependencyString.isEmpty())
 			mainAttributes.put(new Attributes.Name("Dependencies"), dependencyString);
@@ -782,6 +784,10 @@ public class CapsuleMojo extends AbstractMojo {
 	private String getDependencyString() throws IOException {
 		final StringBuilder dependenciesList = new StringBuilder();
 
+		// add app to be resolved
+		if (resolveApp)
+			dependenciesList.append(getCoords(this.project.getArtifact())).append(" ");
+
 		collect().getRoot().accept(new DependencyVisitor() {
 			final AtomicInteger level = new AtomicInteger();
 
@@ -855,6 +861,7 @@ public class CapsuleMojo extends AbstractMojo {
 		//				dependenciesList.append(getCoordsWithExclusions(artifact)).append(" ");
 		//		}
 		//
+
 		return dependenciesList.toString();
 	}
 
