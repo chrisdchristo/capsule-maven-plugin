@@ -334,7 +334,7 @@ public class CapsuleMojo extends AbstractMojo {
 		mainAttributes.put(new Attributes.Name("Application-Class"), this.appClass);
 		mainAttributes.put(new Attributes.Name("Application-Name"), this.outputName);
 		mainAttributes.put(new Attributes.Name("Premain-Class"), DEFAULT_CAPSULE_NAME);
-//		mainAttributes.put(new Attributes.Name("Build-Info"), getBuildInfoString());
+		//		mainAttributes.put(new Attributes.Name("Build-Info"), getBuildInfoString());
 		final String artifactsString = getArtifactString();
 		if (!artifactsString.isEmpty())
 			mainAttributes.put(new Attributes.Name("Embedded-Artifacts"), artifactsString);
@@ -342,7 +342,7 @@ public class CapsuleMojo extends AbstractMojo {
 		if (!dependencyString.isEmpty())
 			mainAttributes.put(new Attributes.Name("Dependencies"), dependencyString);
 
-				final String repoString = getRepoString().trim();
+		final String repoString = getRepoString().trim();
 		if (!repoString.isEmpty())
 			mainAttributes.put(new Attributes.Name("Repositories"), repoString);
 
@@ -539,7 +539,7 @@ public class CapsuleMojo extends AbstractMojo {
 					// check artifact has a file
 					if (file == null) {
 						try {
-							file = resolve(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion()).getArtifact().getFile();
+							file = resolve(artifact.getGroupId(), artifact.getArtifactId(), artifact.getClassifier(), artifact.getVersion()).getArtifact().getFile();
 						} catch (final ArtifactResolutionException e) {
 							e.printStackTrace();
 						}
@@ -735,7 +735,7 @@ public class CapsuleMojo extends AbstractMojo {
 	private String getArtifactString() throws IOException {
 		final StringBuilder artifactList = new StringBuilder();
 
-		if (includeApp) artifactList.append(getCoords(project.getArtifact()));
+		if (includeApp) artifactList.append(getCoords(project.getArtifact())).append(" ");
 
 		collect().getRoot().accept(new DependencyVisitor() {
 			final AtomicInteger level = new AtomicInteger();
@@ -796,6 +796,9 @@ public class CapsuleMojo extends AbstractMojo {
 
 				// skip project level
 				if (level.intValue() == 1) return true;
+
+				// skip transitive deps
+				if (!resolveTransitiveDep && level.intValue() > 2) return true;
 
 				// get objects
 				final org.eclipse.aether.graph.Dependency dependency = node.getDependency();
@@ -867,31 +870,26 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private String getCoords(final Artifact artifact) {
 		if (artifact == null) return null;
-		return artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion();
+		final StringBuilder coords = new StringBuilder();
+		coords.append(artifact.getGroupId()).append(":").append(artifact.getArtifactId());
+		if (artifact.getClassifier() != null && !artifact.getClassifier().isEmpty())
+			coords.append(":").append(artifact.getClassifier());
+		coords.append(":").append(artifact.getVersion());
+		return coords.toString();
 	}
 
 	private String getCoords(final org.eclipse.aether.artifact.Artifact artifact) {
 		if (artifact == null) return null;
-		return artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion();
+		final StringBuilder coords = new StringBuilder();
+		coords.append(artifact.getGroupId()).append(":").append(artifact.getArtifactId());
+		if (artifact.getClassifier() != null && !artifact.getClassifier().isEmpty())
+			coords.append(":").append(artifact.getClassifier());
+		coords.append(":").append(artifact.getVersion());
+		return coords.toString();
 	}
 
-	//	private String getCoordsWithExclusions(final Artifact artifact) {
-	//		final StringBuilder coords = new StringBuilder(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion());
-	//		if (artifact.getExclusions().size() > 0) {
-	//			final StringBuilder exclusionsList = new StringBuilder();
-	//			for (int i = 0; i < artifact.getExclusions().size(); i++) {
-	//				final Exclusion exclusion = artifact.getExclusions().get(i);
-	//				if (i > 0) exclusionsList.append(",");
-	//				exclusionsList.append(exclusion.getGroupId()).append(":").append(exclusion.getArtifactId());
-	//			}
-	//			coords.append("(").append(exclusionsList.toString()).append(")");
-	//		}
-	//		return coords.toString();
-	//	}
-
 	private String getCoordsWithExclusions(final org.eclipse.aether.graph.Dependency dependency) {
-		final StringBuilder coords = new StringBuilder(dependency.getArtifact().getGroupId() + ":" + dependency.getArtifact().getArtifactId() + ":" + dependency
-			.getArtifact().getVersion());
+		final StringBuilder coords = new StringBuilder(getCoords(dependency.getArtifact()));
 		if (dependency.getExclusions().size() > 0) {
 			final StringBuilder exclusionsList = new StringBuilder();
 			int i = 0;
@@ -1005,7 +1003,7 @@ public class CapsuleMojo extends AbstractMojo {
 		if (this.resolvedCapsuleProjectFile == null) {
 			final ArtifactResult artifactResult;
 			try {
-				artifactResult = this.resolve(CAPSULE_GROUP, "capsule", capsuleVersion);
+				artifactResult = this.resolve(CAPSULE_GROUP, "capsule", null, capsuleVersion);
 			} catch (final ArtifactResolutionException e) {
 				throw new IOException("Capsule not found from repos");
 			}
@@ -1018,7 +1016,7 @@ public class CapsuleMojo extends AbstractMojo {
 		if (this.resolvedCapsuleMavenProjectFile == null) {
 			final ArtifactResult artifactResult;
 			try {
-				artifactResult = this.resolve(CAPSULE_GROUP, "capsule-maven", capsuleMavenVersion);
+				artifactResult = this.resolve(CAPSULE_GROUP, "capsule-maven", null, capsuleMavenVersion);
 			} catch (final ArtifactResolutionException e) {
 				throw new IOException("CapsuleMaven not found from repos");
 			}
@@ -1027,8 +1025,10 @@ public class CapsuleMojo extends AbstractMojo {
 		return this.resolvedCapsuleMavenProjectFile;
 	}
 
-	private ArtifactResult resolve(final String groupId, final String artifactId, final String version) throws ArtifactResolutionException {
+	private ArtifactResult resolve(final String groupId, final String artifactId, final String classifier, final String version) throws
+		ArtifactResolutionException {
 		String coords = groupId + ":" + artifactId;
+		if (classifier != null && !classifier.isEmpty()) coords += ":" + classifier;
 		if (version != null && !version.isEmpty()) coords += ":" + version;
 		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(coords), remoteRepos, null));
 	}
