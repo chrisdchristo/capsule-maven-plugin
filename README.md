@@ -286,7 +286,7 @@ In maven, you can essentially define the following five scopes for your dependen
 
 You set the scope on each of the project's direct dependencies. Although transitive dependencies will have defined scope also, this only applies specifically to their own project.
 
-The scope of transitive dependencies in relation to the main project will be directly affected by the scope its parent dependency. We call this the 'direct-scope'.
+The scope of transitive dependencies in relation to the main project will be directly affected by the scope of its parent dependency. We call this the 'direct-scope'.
 
 Also, note that transitive dependencies with scope other than ```compile``` or ```runtime``` are not applicable to the main project and thus are excluded always.
 
