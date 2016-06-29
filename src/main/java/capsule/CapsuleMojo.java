@@ -83,7 +83,7 @@ public class CapsuleMojo extends AbstractMojo {
 	private String appClass = null;
 	@Parameter(property = "capsule.caplets")
 	private String caplets;
-	@Parameter(property = "capsule.type", defaultValue = "false")
+	@Parameter(property = "capsule.type")
 	private Type type = null;
 	@Parameter(property = "capsule.chmod", defaultValue = "false")
 	private String chmod = null;
