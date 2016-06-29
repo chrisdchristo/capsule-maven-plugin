@@ -214,21 +214,18 @@ And similarly an ```empty``` capsule is done with the following:
 <resolveTransitiveDep>true</resolveTransitiveDep>
 ```
 
-
 ## Runtime Resolution
 
-To perform the resolution at runtime, the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory if any dependencies (or the app itself) needs to be resolved at runtime.
+To perform the resolution at runtime (such as needed by the ```thin``` and ```empty``` types), the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory if any dependencies (or the app itself) needs to be resolved at runtime.
 
-To build the capsule without this additional code, make sure none of the ```resolve``` flags are set to true (by default all set to false).
+To build the capsule without this additional code, make sure none of the ```resolveXYZ``` flags are set to true (by default all set to false or the ```<type>``` is set to ```fat```).
 
-Namely these are, ```<resolveAppDep>```, ```<resolveCompileDep>```, ```<resolveRuntimeDep>```, ```<resolveProvidedDep>```, ```<resolveSystemDep>```, ```<resolveTestDep>```.
-
-So if resolution is needed at runtime for any of these options, then it needs to be set in the ```<configuration>``` tag like so:
+If making a custom build and resolution is needed at runtime, then add the desired ```resolveXYZ``` tags in the ```<configuration>``` tag like so:
 
 ```
 <configuration>
 	<appClass>hello.HelloWorld</appClass>
-	<resolveAppDep>true<resolveAppDep>
+	<resolveApp>true<resolveApp>
 	<resolveCompileDep>true<resolveCompileDep>
 </configuration>
 ```
@@ -272,7 +269,6 @@ So, for example an optional dependency is declared like so:
 <dependency>
 	<groupId>com.google.guava</groupId>
 	<artifactId>guava</artifactId>
-	<version>17.0</version>
 	<optional>true</optional>
 </dependency>
 ```
