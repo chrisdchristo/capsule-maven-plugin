@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.2.0-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.2.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.3.0-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.3.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/sg.enixsoft/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a [capsule](https://github.com/puniverse/capsule) out of your app.
@@ -27,7 +27,7 @@ cd capsule-maven-plugin
 mvn install
 ```
 
-Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/com.github.chrischristo/capsule-maven-plugin).
+Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/sg.enixsoft/capsule-maven-plugin).
 
 ## Quick Start
 
@@ -35,11 +35,12 @@ In the simplest form, you can add the following snippet in your `pom.xml`:
 
 ```
 <plugin>
-	<groupId>com.github.chrischristo</groupId>
+	<groupId>sg.enixsoft</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
 		<appClass>hello.HelloWorld</appClass>
+		<type>fat</type>
 	</configuration>
 </plugin>
 ```
@@ -66,7 +67,7 @@ It is recommended to have an execution setup to build the capsules, thus elimina
 
 ```
 <plugin>
-	<groupId>com.github.chrischristo</groupId>
+	<groupId>sg.enixsoft</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<executions>
@@ -76,6 +77,7 @@ It is recommended to have an execution setup to build the capsules, thus elimina
 			</goals>
 			<configuration>
 				<appClass>hello.HelloWorld</appClass>
+				<type>fat</type>
 			</configuration>
 		</execution>
 	</executions>
@@ -94,103 +96,120 @@ Essentially Capsule can be packaged with as much or as little as you want.
 
 You have the option to include all, none or some of the dependencies. This can be done based on their ```scope```, their ```optional``` flag and if they are direct (root) or indirect (transitive) dependencies.
 
-Generally in the past, to simplify things, we defined three common types:
+### The Simple Types
 
-- `fat`: This capsule jar will contain your app's jar as well as **some** (or usually, **all**) its dependencies. When the fat-jar is run, if all dependencies are included, then Capsule will simply setup the app and run it. If there are any missing dependencies then Capsule will resolve any missing dependencies at runtime (in the cache) before running it.
+Generally, the most common types of capsules are the following three:
+
+- `fat`: This capsule jar will contain your app's jar as well as **all** its dependencies. When the fat-jar is run, then Capsule will simply setup the app and run it.
 - `thin`: This capsule jar will contain your app's classes but **no** dependencies. Capsule will resolve these dependencies at runtime (in the cache).
-- `empty`: This capsule will not include your app, or any of its dependencies. It will only contain the name of your app declared in the jar's manifest, along with capsule's classes. Capsule will read the manifest entry `Application` and resolve the app and its dependencies in Capsule's own cache (default `~/.capsule`).
+- `empty`: This capsule will not even include your app, or any of its dependencies. It will only contain the name of your app declared in the jar's manifest, along with capsule's classes. Capsule will read the manifest entry ```Application``` and resolve the app and its dependencies in Capsule's own cache (default `~/.capsule`).
 
-Since users have shown a desire for a wide range of different setups, its encouraged you build the capsule with your own specific requirements without being bogged down on the three specific types listed above.
+These are just the popular types that fit neatly into a box, and thus the plugin provides a simple flag to build these. Namely the ```<type>``` field can be set to ```fat```, ```thin``` or ```empty```.
 
+To build a ```fat``` capsule simply include the following:
+ 
+```
+<plugin>
+	<groupId>sg.enixsoft</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
+	<configuration>
+	  <appClass>hello.HelloWorld</appClass>
+	  <type>fat</type>
+	</configuration>
+</plugin>
+```
 
-By default, the plugin will build a capsule that includes the app, and all its dependencies (including transitive) which is essentially a fat capsule.
+And similarly for ```thin``` and ```empty```:
 
 ```
-target/my-app-1.0-cap.jar
+<plugin>
+	<groupId>sg.enixsoft</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
+	<configuration>
+	  <appClass>hello.HelloWorld</appClass>
+	  <type>thin</type>
+	</configuration>
+</plugin>
 ```
 
-The plugin is flexible in what it can embed inside the capsule jar, as you have the following options:
+```
+<plugin>
+	<groupId>sg.enixsoft</groupId>
+	<artifactId>capsule-maven-plugin</artifactId>
+	<version>${capsule.maven.plugin.version}</version>
+	<configuration>
+	  <appClass>hello.HelloWorld</appClass>
+	  <type>empty</type>
+	</configuration>
+</plugin>
+```
+
+Note that the the three simple types apply to only the ```compile``` and ```runtime``` scoped dependencies (but cover the transitive dependencies). More on this later.
+
+If none of these quite fit then the plugin can accommodate a wide range of different setups, its encouraged you build the capsule with your own specific requirements without being bogged down on the three specific types listed above.
+
+### Custom Builds
+
+(Note, to make a custom build, the ```<type>``` tag must not be set!)
+
+If the types defined in the ```<type>``` don't quite fit your needs and you need something a little different, then you can easily customise the jar to a vast array of options.
+
+Essentially it comes down to the following scenarios; whether or not to include the app or resolve it at runtime; what dependencies to include based on their scope and which to resolve at runtime; and same question for the transitive dependencies.
+
+So to cover all these ideas, you have the following flags:
+
+```
+<includeApp>false</includeApp>
+<includeCompileDep>false</includeCompileDep>
+<includeRuntimeDep>false</includeRuntimeDep>
+<includeProvidedDep>false</includeProvidedDep>
+<includeSystemDep>false</includeSystemDep>
+<includeTestDep>false</includeTestDep>
+<includeTransitiveDep>false</includeTransitiveDep>
+<includeOptionalDep>false</includeOptionalDep>
+
+<resolveApp>false</resolveApp>
+<resolveCompileDep>false</resolveCompileDep>
+<resolveRuntimeDep>false</resolveRuntimeDep>
+<resolveProvidedDep>false</resolveProvidedDep>
+<resolveSystemDep>false</resolveSystemDep>
+<resolveTestDep>false</resolveTestDep>
+<resolveTransitiveDep>false</resolveTransitiveDep>
+```
+
+All of the above settings are ```false``` by default.
+
+These ```includeXYZ``` flags essentially tell the plugin what to include in the jar. Of course if there are any of these that you exclude from the capsule jar, and in turn they are needed for the launch, then runtime resolution will be needed by marking some ```resolveXYZ``` to ```true```.
+
+A ```fat``` capsule essentially is equivalent to having only the following set to ```true```:
 
 ```
 <includeApp>true</includeApp>
 <includeCompileDep>true</includeCompileDep>
 <includeRuntimeDep>true</includeRuntimeDep>
-<includeProvidedDep>false</includeProvidedDep>
-<includeSystemDep>false</includeSystemDep>
-<includeTestDep>false</includeTestDep>
 <includeTransitiveDep>true</includeTransitiveDep>
-<includeOptionalDep>false</includeOptionalDep>
 ```
 
-These ```includeXYZ``` flags essentially tell the plugin what to include in the jar. Of course if there are any of these that you exclude from the capsule jar, and in turn they are needed for the launch, then runtime resolution will be needed (see next section).
-
-The above settings are the defaults.
+So as you can see, we include the app, and all its compile and runtime dependencies (including the transitive dependencies).
 
 So if a ```thin``` capsule is desired, it can be done like so:
 
 ```
-<plugin>
-	<groupId>com.github.chrischristo</groupId>
-	<artifactId>capsule-maven-plugin</artifactId>
-	<version>${capsule.maven.plugin.version}</version>
-	<executions>
-		<execution>
-			<goals>
-				<goal>build</goal>
-			</goals>
-			<configuration>
-				<appClass>hello.HelloWorld</appClass>
-				<includeApp>true</includeApp>
-				<includeCompileDep>false</includeCompileDep>
-				<includeRuntimeDep>false</includeRuntimeDep>
-				<includeProvidedDep>false</includeProvidedDep>
-				<includeSystemDep>false</includeSystemDep>
-				<includeTestDep>false</includeTestDep>
-				<includeTransitiveDep>false</includeTransitiveDep>
-				<resolveCompileDep>true</resolveCompileDep>
-				<resolveRuntimeDep>true</resolveRuntimeDep>
-				<resolveProvidedDep>true</resolveProvidedDep>
-				<resolveSystemDep>true</resolveSystemDep>
-				<resolveTestDep>false</resolveTestDep>
-				<resolveTransitiveDep>true</resolveTransitiveDep>
-			</configuration>
-		</execution>
-	</executions>
-</plugin>
+<includeApp>true</includeApp>
+<resolveCompileDep>true</resolveCompileDep>
+<resolveRuntimeDep>true</resolveRuntimeDep>
+<resolveTransitiveDep>true</resolveTransitiveDep>
 ```
 
-And likewise if an ```empty``` capsule is desired, it can be done like so:
+And similarly an ```empty``` capsule is done with the following:
 
 ```
-<plugin>
-	<groupId>com.github.chrischristo</groupId>
-	<artifactId>capsule-maven-plugin</artifactId>
-	<version>${capsule.maven.plugin.version}</version>
-	<executions>
-		<execution>
-			<goals>
-				<goal>build</goal>
-			</goals>
-			<configuration>
-				<appClass>hello.HelloWorld</appClass>
-				<includeApp>false</includeApp>
-				<includeCompileDep>false</includeCompileDep>
-				<includeRuntimeDep>false</includeRuntimeDep>
-				<includeProvidedDep>false</includeProvidedDep>
-				<includeSystemDep>false</includeSystemDep>
-				<includeTestDep>false</includeTestDep>
-				<includeTransitiveDep>false</includeTransitiveDep>
-				<resolveApp>true</resolveApp>
-				<resolveCompileDep>true</resolveCompileDep>
-				<resolveRuntimeDep>true</resolveRuntimeDep>
-				<resolveProvidedDep>true</resolveProvidedDep>
-				<resolveSystemDep>true</resolveSystemDep>
-				<resolveTestDep>false</resolveTestDep>
-				<resolveTransitiveDep>true</resolveTransitiveDep>
-			</configuration>
-		</execution>
-	</executions>
-</plugin>
+<resolveApp>true</resolveApp>
+<resolveCompileDep>true</resolveCompileDep>
+<resolveRuntimeDep>true</resolveRuntimeDep>
+<resolveTransitiveDep>true</resolveTransitiveDep>
 ```
 
 
@@ -442,7 +461,7 @@ So for example if you'd like to have your output capsule jar like 'my-amazing-ap
 	<finalName>my-amazing-app</finalName>
 	<plugins>
 		<plugin>
-      <groupId>com.github.chrischristo</groupId>
+      <groupId>sg.enixsoft</groupId>
       <artifactId>capsule-maven-plugin</artifactId>
       <version>${capsule.maven.plugin.version}</version>
       <configuration>
@@ -613,7 +632,7 @@ In the capsule plugin you can set the `<execPluginConfig>` tag to do this:
 
 ```
 <plugin>
-	<groupId>com.github.chrischristo</groupId>
+	<groupId>sg.enixsoft</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -649,7 +668,7 @@ Then you can specify the `<execPluginConfig>` to the ID of the execution:
 
 ```
 <plugin>
-	<groupId>com.github.chrischristo</groupId>
+	<groupId>sg.enixsoft</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -690,7 +709,7 @@ So essentially you can setup as follows:
 	</configuration>
 </plugin>
 <plugin>
-	<groupId>com.github.chrischristo</groupId>
+	<groupId>sg.enixsoft</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -711,21 +730,22 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<outputDir> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
-* `<includeApp> (Optional)`: Specify whether the app itself should be embedded. Default is true.
-* `<includeCompileDep> (Optional)`: Specify whether compile scope dependencies should be embedded. Default is true.
-* `<includeRuntimeDep> (Optional)`: Specify whether runtime scope dependencies should be embedded. Default is true.
-* `<includeProvidedDep> (Optional)`: Specify whether provided scope dependencies should be embedded. Default is false.
-* `<includeSystemDep> (Optional)`: Specify whether system scope dependencies should be embedded. Default is false.
-* `<includeTestDep> (Optional)`: Specify whether test scope dependencies should be embedded. Default is false.
-* `<includeTransitiveDep> (Optional)`: Specify whether transitive dependencies should also be embedded. Default is true.
-* `<includeOptionalDep> (Optional)`: Specify whether optional dependencies should also be embedded. The default is false.
-* `<resolveApp> (Optional)`: Specifies whether the app should be resolved at launch. The default is false.
-* `<resolveCompileDep> (Optional)`: Specifies whether the compile scoped dependencies should be resolved at launch. The default is false.
-* `<resolveRuntimeDep> (Optional)`: Specifies whether the runtime scoped dependencies should be resolved at launch. The default is false.
-* `<resolveProvidedDep> (Optional)`: Specifies whether the system scoped dependencies should be resolved at launch. The default is false.
-* `<resolveSystemDep> (Optional)`: Specifies whether the system scoped dependencies should be resolved at launch. The default is false.
-* `<resolveTestDep> (Optional)`: Specifies whether the test scoped dependencies should be resolved at launch. The default is false.
-* `<resolveTransitiveDep> (Optional)`: Specifies whether the transitive dependencies should be resolved at launch. The default is false.
+* `<type> (Optional)`: Can be either ```empty```, ```thin``` or ```fat```. Tells the plugin to build a capsule based on of these predefined builds. If present, the plugin will ignore all of the ```<includeXYZ>``` and ```<resolveXYZ>```.
+* `<includeApp> (Optional)`: Specify whether the app itself should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
+* `<includeCompileDep> (Optional)`: Specify whether compile scope dependencies should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
+* `<includeRuntimeDep> (Optional)`: Specify whether runtime scope dependencies should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
+* `<includeProvidedDep> (Optional)`: Specify whether provided scope dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
+* `<includeSystemDep> (Optional)`: Specify whether system scope dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
+* `<includeTestDep> (Optional)`: Specify whether test scope dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
+* `<includeTransitiveDep> (Optional)`: Specify whether transitive dependencies should also be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
+* `<includeOptionalDep> (Optional)`: Specify whether optional dependencies should also be embedded. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveApp> (Optional)`: Specifies whether the app should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveCompileDep> (Optional)`: Specifies whether the compile scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveRuntimeDep> (Optional)`: Specifies whether the runtime scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveProvidedDep> (Optional)`: Specifies whether the system scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveSystemDep> (Optional)`: Specifies whether the system scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveTestDep> (Optional)`: Specifies whether the test scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveTransitiveDep> (Optional)`: Specifies whether the transitive dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](http://www.capsule.io/reference/) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
@@ -736,7 +756,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 ```
 <!-- BUILD CAPSULES -->
 <plugin>
-	<groupId>com.github.chrischristo</groupId>
+	<groupId>sg.enixsoft</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -746,6 +766,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<outputDir>target</outputDir>
 		<caplets>MyCapsule MyCapsule2</caplets>
 
+		<type>fat</type>
 		<chmod>true</chmod>
 		<trampoline>true</trampoline>
 

@@ -83,15 +83,21 @@ public class CapsuleMojo extends AbstractMojo {
 	private String appClass = null;
 	@Parameter(property = "capsule.caplets")
 	private String caplets;
+	@Parameter(property = "capsule.type", defaultValue = "false")
+	private Type type = null;
+	@Parameter(property = "capsule.chmod", defaultValue = "false")
+	private String chmod = null;
+	@Parameter(property = "capsule.trampoline", defaultValue = "false")
+	private String trampoline = null;
 
 	@Parameter(property = "capsule.includeApp", defaultValue = "true")
-	private boolean includeApp = true;
+	private boolean includeApp = false;
 	@Parameter(property = "capsule.includeTransitiveDep", defaultValue = "true")
-	private boolean includeTransitiveDep = true;
+	private boolean includeTransitiveDep = false;
 	@Parameter(property = "capsule.includeCompileDep", defaultValue = "true")
-	private boolean includeCompileDep = true;
+	private boolean includeCompileDep = false;
 	@Parameter(property = "capsule.includeRuntimeDep", defaultValue = "true")
-	private boolean includeRuntimeDep = true;
+	private boolean includeRuntimeDep = false;
 	@Parameter(property = "capsule.includeProvidedDep", defaultValue = "false")
 	private boolean includeProvidedDep = false;
 	@Parameter(property = "capsule.includeSystemDep", defaultValue = "false")
@@ -111,18 +117,12 @@ public class CapsuleMojo extends AbstractMojo {
 	private boolean resolveRuntimeDep = false;
 	@Parameter(property = "capsule.resolveProvidedDep", defaultValue = "false")
 	private boolean resolveProvidedDep = false;
-
 	@Parameter(property = "capsule.resolveSystemDep", defaultValue = "false")
 	private boolean resolveSystemDep = false;
 	@Parameter(property = "capsule.resolveTestDep", defaultValue = "false")
 	private boolean resolveTestDep = false;
 	@Parameter(property = "capsule.resolveOptionalDep", defaultValue = "false")
 	private boolean resolveOptionalDep = false;
-
-	@Parameter(property = "capsule.chmod", defaultValue = "false")
-	private String chmod = null;
-	@Parameter(property = "capsule.trampoline", defaultValue = "false")
-	private String trampoline = null;
 
 	@Parameter(property = "capsule.execPluginConfig")
 	private String execPluginConfig = null;
@@ -148,6 +148,60 @@ public class CapsuleMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
+
+		// check for type (this overrides custom behaviour)
+		if (type == Type.empty) {
+			includeApp = false;
+			includeTransitiveDep = false;
+			includeCompileDep = false;
+			includeRuntimeDep = false;
+			includeProvidedDep = false;
+			includeSystemDep = false;
+			includeTestDep = false;
+			includeOptionalDep = false;
+			resolveApp = true;
+			resolveTransitiveDep = true;
+			resolveCompileDep = true;
+			resolveRuntimeDep = true;
+			resolveProvidedDep = false;
+			resolveSystemDep = false;
+			resolveTestDep = false;
+			resolveOptionalDep = false;
+		} else if (type == Type.thin) {
+			includeApp = true;
+			includeTransitiveDep = false;
+			includeCompileDep = false;
+			includeRuntimeDep = false;
+			includeProvidedDep = false;
+			includeSystemDep = false;
+			includeTestDep = false;
+			includeOptionalDep = false;
+			resolveApp = false;
+			resolveTransitiveDep = true;
+			resolveCompileDep = true;
+			resolveRuntimeDep = true;
+			resolveProvidedDep = false;
+			resolveSystemDep = false;
+			resolveTestDep = false;
+			resolveOptionalDep = false;
+		} else if (type == Type.fat) {
+			includeApp = true;
+			includeTransitiveDep = true;
+			includeCompileDep = true;
+			includeRuntimeDep = true;
+			includeProvidedDep = false;
+			includeSystemDep = false;
+			includeTestDep = false;
+			includeOptionalDep = false;
+			resolveApp = false;
+			resolveTransitiveDep = false;
+			resolveCompileDep = false;
+			resolveRuntimeDep = false;
+			resolveProvidedDep = false;
+			resolveSystemDep = false;
+			resolveTestDep = false;
+			resolveOptionalDep = false;
+		}
 
 		// check for exec plugin
 		if (execPluginConfig != null && project.getPlugin(EXEC_PLUGIN_KEY) != null) {
@@ -863,6 +917,10 @@ public class CapsuleMojo extends AbstractMojo {
 			this.key = key;
 			this.value = value;
 		}
+	}
+
+	public enum Type {
+		empty, thin, fat;
 	}
 
 	public static class Mode {
