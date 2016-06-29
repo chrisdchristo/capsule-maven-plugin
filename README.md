@@ -305,7 +305,7 @@ You set the scope on each of the project's direct dependencies. Although transit
 
 The scope of transitive dependencies in relation to the main project will be directly affected by the scope of its parent dependency. We call this the 'direct-scope'.
 
-Also, note that transitive dependencies with scope other than ```compile``` or ```runtime``` are not applicable to the main project and thus are excluded always.
+Also note, that transitive dependencies with scope other than ```compile``` or ```runtime``` are not applicable to the main project and thus are **excluded always**.
 
 So for each direct dependency with scope:
 
