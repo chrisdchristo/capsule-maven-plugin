@@ -1,18 +1,20 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.3.0-blue.svg?style=flat)](https://github.com/chrischristo/capsule-maven-plugin/releases)
+(This is the official maintained version, it has superseded the previous repo held at [chrisdchristo](https://github.com/chrisdchristo/capsule-maven-plugin/).)
+
+[![Version](http://img.shields.io/badge/version-1.3.0-blue.svg?style=flat)](https://github.com/enix/capsule-maven-plugin/releases)
 [![Maven Central](http://img.shields.io/badge/maven_central-1.3.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/sg.enixsoft/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a [capsule](https://github.com/puniverse/capsule) out of your app.
 
-- [Capsule | simple java deployment](https://medium.com/@chrischristo/capsule-simple-java-delpoyment-7a70be622375)
-- [Capsule & AWS | Java on the cloud](https://medium.com/@chrischristo/capsule-aws-java-on-the-cloud-4abe2d4d6c89)
+- [Capsule | simple java deployment](https://medium.com/@chrisdchristo/capsule-simple-java-delpoyment-7a70be622375)
+- [Capsule & AWS | Java on the cloud](https://medium.com/@chrisdchristo/capsule-aws-java-on-the-cloud-4abe2d4d6c89)
 
-See more at [capsule](https://github.com/puniverse/capsule) and the [demo using the plugin](https://github.com/chrischristo/capsule-maven-plugin-demo).
+See more at [capsule](https://github.com/puniverse/capsule) and the [demo using the plugin](https://github.com/enix/capsule-maven-plugin-demo).
 
-A pro? [Skip to the plugin reference](https://github.com/chrischristo/capsule-maven-plugin#reference).
+A pro? [Skip to the plugin reference](https://github.com/enix/capsule-maven-plugin#reference).
 
 Requires java version 1.7+ and maven 3.1.x+
 
@@ -22,7 +24,7 @@ Supports [Capsule v1.0.2](https://github.com/puniverse/capsule/releases/tag/v1.0
 Clone the project and run a maven install:
 
 ```
-git clone https://github.com/chrischristo/capsule-maven-plugin.git
+git clone https://github.com/enix/capsule-maven-plugin.git
 cd capsule-maven-plugin
 mvn install
 ```
@@ -88,7 +90,7 @@ By default the `build` goal runs during the package phase.
 
 So now if you were to run simply `mvn package` then the build goal will execute which will build the capsules into your build directory.
 
-Or alternatively you could use the `maven-exec-plugin` to run your app (as you develop), and then only build the capsule(s) when you want to deploy to a server. This plugin integrates nicely with the `maven-exec-plugin`, [see here](https://github.com/chrischristo/capsule-maven-plugin#maven-exec-plugin-integration).
+Or alternatively you could use the `maven-exec-plugin` to run your app (as you develop), and then only build the capsule(s) when you want to deploy to a server. This plugin integrates nicely with the `maven-exec-plugin`, [see here](https://github.com/enix/capsule-maven-plugin#maven-exec-plugin-integration).
 
 ## Capsule Contents
 
@@ -726,7 +728,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 
 * `<appClass>`: The class with the main method (with package declaration) of your app that the capsule should run. This can be optional too, if you are using the maven exec plugin and have specified a `execPluginConfig`.
 * `<chmod> (Optional)`: If executable (chmod +x) versions of the capsules should be built in the form of '.x' files (Applicable for Mac/Unix style systems). See [here](https://github.com/brianm/really-executable-jars-maven-plugin) and [here](http://skife.org/java/unix/2011/06/20/really_executable_jars.html) for more info. Defaults to false.
-* `<trampoline> (Optional)`: This will create trampoline style executable capsules in the form of '.tx' files. See more info [here](https://github.com/chrischristo/capsule-maven-plugin#trampoline).
+* `<trampoline> (Optional)`: This will create trampoline style executable capsules in the form of '.tx' files. See more info [here](https://github.com/enix/capsule-maven-plugin#trampoline).
 * `<outputDir> (Optional)`: Specifies the output directory. Defaults to the `${project.build.directory}`.
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
@@ -747,10 +749,10 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<resolveTestDep> (Optional)`: Specifies whether the test scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<resolveTransitiveDep> (Optional)`: Specifies whether the transitive dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](http://www.capsule.io/reference/) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
-* `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrischristo/capsule-maven-plugin#modes).
-* `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
-* `<dependencySets> (Optional)`: Define a set of `<dependencySet>` to copy over files contained within remote dependencies into the capsule. [See more here](https://github.com/chrischristo/capsule-maven-plugin#filesets-and-dependencysets).
-* `<caplets> (Optional)`: Define a list of caplets (custom Capsule classes). [See more here](https://github.com/chrischristo/capsule-maven-plugin#caplets).
+* `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/enix/capsule-maven-plugin#modes).
+* `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/enix/capsule-maven-plugin#filesets-and-dependencysets).
+* `<dependencySets> (Optional)`: Define a set of `<dependencySet>` to copy over files contained within remote dependencies into the capsule. [See more here](https://github.com/enix/capsule-maven-plugin#filesets-and-dependencysets).
+* `<caplets> (Optional)`: Define a list of caplets (custom Capsule classes). [See more here](https://github.com/enix/capsule-maven-plugin#caplets).
 * `<customDescriptor> (Optional)`: The custom text for the descriptor part of the name of the output jar. This combined with the `<finalName>` tag creates the output name of the jar.
 
 ```
