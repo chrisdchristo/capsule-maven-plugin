@@ -4,7 +4,7 @@ Capsule Maven Plugin
 (This is the official maintained version, it has superseded the previous repo held at [chrisdchristo](https://github.com/chrisdchristo/capsule-maven-plugin/).)
 
 [![Version](http://img.shields.io/badge/version-1.3.0-blue.svg?style=flat)](https://github.com/enix/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.3.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/sg.enixsoft/capsule-maven-plugin/)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.3.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.enix/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a [capsule](https://github.com/puniverse/capsule) out of your app.
@@ -29,7 +29,7 @@ cd capsule-maven-plugin
 mvn install
 ```
 
-Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/sg.enixsoft/capsule-maven-plugin).
+Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/com.github.enix/capsule-maven-plugin).
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ In the simplest form, you can add the following snippet in your `pom.xml`:
 
 ```
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -69,7 +69,7 @@ It is recommended to have an execution setup to build the capsules, thus elimina
 
 ```
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<executions>
@@ -112,7 +112,7 @@ To build a ```fat``` capsule simply include the following:
  
 ```
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -126,7 +126,7 @@ And similarly for ```thin``` and ```empty```:
 
 ```
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -138,7 +138,7 @@ And similarly for ```thin``` and ```empty```:
 
 ```
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -459,7 +459,7 @@ So for example if you'd like to have your output capsule jar like 'my-amazing-ap
 	<finalName>my-amazing-app</finalName>
 	<plugins>
 		<plugin>
-      <groupId>sg.enixsoft</groupId>
+      <groupId>com.github.enix</groupId>
       <artifactId>capsule-maven-plugin</artifactId>
       <version>${capsule.maven.plugin.version}</version>
       <configuration>
@@ -630,7 +630,7 @@ In the capsule plugin you can set the `<execPluginConfig>` tag to do this:
 
 ```
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -666,7 +666,7 @@ Then you can specify the `<execPluginConfig>` to the ID of the execution:
 
 ```
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -707,7 +707,7 @@ So essentially you can setup as follows:
 	</configuration>
 </plugin>
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -754,7 +754,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 ```
 <!-- BUILD CAPSULES -->
 <plugin>
-	<groupId>sg.enixsoft</groupId>
+	<groupId>com.github.enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
