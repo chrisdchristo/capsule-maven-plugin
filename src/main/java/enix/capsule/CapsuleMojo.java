@@ -69,6 +69,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private String finalName = null;
 	@Parameter(defaultValue = "${project.build.directory}")
 	private File buildDir = null;
+	@Parameter(defaultValue = "${project.basedir}")
+	private File baseDir = null;
 
 	/**
 	 * OPTIONAL VARIABLES
@@ -552,7 +554,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		for (final FileSet fileSet : fileSets) {
 			if (fileSet.directory != null && !fileSet.directory.isEmpty()) {
-				final File directory = new File(fileSet.directory);
+				final File directory = new File(baseDir.getPath() + File.separatorChar + fileSet.directory);
 
 				// warn & skip if not directory
 				if (!directory.isDirectory()) {
