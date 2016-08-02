@@ -554,7 +554,15 @@ public class CapsuleMojo extends AbstractMojo {
 
 		for (final FileSet fileSet : fileSets) {
 			if (fileSet.directory != null && !fileSet.directory.isEmpty()) {
-				final File directory = new File(baseDir.getPath() + File.separatorChar + fileSet.directory);
+				final File fileSetDir = new File(fileSet.directory);
+				final File directory;
+				if (fileSetDir.isAbsolute()) {
+					directory = fileSetDir;
+					debug("\t[FileSet]: Use absolute Path: " + directory.getPath());
+				} else {
+					directory = new File(baseDir.getPath() + File.separatorChar + fileSet.directory);
+					debug("\t[FileSet]: Resolve relative Path: " + directory.getPath());
+				}
 
 				// warn & skip if not directory
 				if (!directory.isDirectory()) {
