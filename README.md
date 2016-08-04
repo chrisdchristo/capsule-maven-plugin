@@ -29,7 +29,7 @@ cd capsule-maven-plugin
 mvn install
 ```
 
-Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/com.github.enix/capsule-maven-plugin).
+Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/enix/capsule-maven-plugin).
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ In the simplest form, you can add the following snippet in your `pom.xml`:
 
 ```
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -69,7 +69,7 @@ It is recommended to have an execution setup to build the capsules, thus elimina
 
 ```
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<executions>
@@ -112,7 +112,7 @@ To build a ```fat``` capsule simply include the following:
  
 ```
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -126,7 +126,7 @@ And similarly for ```thin``` and ```empty```:
 
 ```
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -138,7 +138,7 @@ And similarly for ```thin``` and ```empty```:
 
 ```
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -459,7 +459,7 @@ So for example if you'd like to have your output capsule jar like 'my-amazing-ap
 	<finalName>my-amazing-app</finalName>
 	<plugins>
 		<plugin>
-      <groupId>com.github.enix</groupId>
+      <groupId>enix</groupId>
       <artifactId>capsule-maven-plugin</artifactId>
       <version>${capsule.maven.plugin.version}</version>
       <configuration>
@@ -630,7 +630,7 @@ In the capsule plugin you can set the `<execPluginConfig>` tag to do this:
 
 ```
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -666,7 +666,7 @@ Then you can specify the `<execPluginConfig>` to the ID of the execution:
 
 ```
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -707,7 +707,7 @@ So essentially you can setup as follows:
 	</configuration>
 </plugin>
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
@@ -754,7 +754,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 ```
 <!-- BUILD CAPSULES -->
 <plugin>
-	<groupId>com.github.enix</groupId>
+	<groupId>enix</groupId>
 	<artifactId>capsule-maven-plugin</artifactId>
 	<version>${capsule.maven.plugin.version}</version>
 	<configuration>
