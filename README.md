@@ -1,8 +1,6 @@
 Capsule Maven Plugin
 ====================
 
-(This is the official maintained version, it has superseded the previous repo held at [chrisdchristo](https://github.com/chrisdchristo/capsule-maven-plugin/).)
-
 [![Version](http://img.shields.io/badge/version-1.4.0-blue.svg?style=flat)](https://github.com/chrisdchristo/capsule-maven-plugin/releases)
 [![Maven Central](http://img.shields.io/badge/maven_central-1.4.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrisdchristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
