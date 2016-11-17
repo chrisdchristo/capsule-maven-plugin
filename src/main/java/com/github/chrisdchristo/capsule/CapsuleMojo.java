@@ -37,7 +37,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private String LOG_PREFIX = "[CapsuleMavenPlugin] ";
 
-	private static final String DEFAULT_CAPSULE_VERSION = "1.0.2";
+	private static final String DEFAULT_CAPSULE_VERSION = "1.0.3";
 	private static final String DEFAULT_CAPSULE_MAVEN_VERSION = "1.0.3";
 
 	private static final String CAPSULE_GROUP = "co.paralleluniverse";
