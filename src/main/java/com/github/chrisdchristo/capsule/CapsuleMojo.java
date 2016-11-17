@@ -1,4 +1,4 @@
-package enix.capsule;
+package com.github.chrisdchristo.capsule;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
