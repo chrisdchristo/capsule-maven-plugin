@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.4.0-blue.svg?style=flat)](https://github.com/chrisdchristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.4.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrisdchristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.4.2-blue.svg?style=flat)](https://github.com/chrisdchristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.4.2-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrisdchristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a [capsule](https://github.com/puniverse/capsule) out of your app.
@@ -727,6 +727,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<execPluginConfig> (Optional)`: Specifies the ID of an execution within the exec-maven-plugin. The configuration from this execution will then be used to configure the capsules. If you specify 'root' then the `<configuration>` at root will be used instead of a particular execution. The exec's `<mainClass>` will map to Capsule's `<appClass>`. The exec's `<systemProperties>` will map to capsule's `<properties>`. If you specify this tag then the `<appClass>` tag does not need to present.
 * `<properties> (Optional)`: The system properties to provide the app with.
 * `<type> (Optional)`: Can be either ```empty```, ```thin``` or ```fat```. Tells the plugin to build a capsule based on of these predefined builds. If present, the plugin will ignore all of the ```<includeXYZ>``` and ```<resolveXYZ>```.
+* `<setManifestRepos> (Optional)`: Can either be ```true``` or ```false```, default is ```false```. This will append a manifest entry ```Repositories``` with values as defined by the project's ```pom.xml```.
 * `<includeApp> (Optional)`: Specify whether the app itself should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
 * `<includeCompileDep> (Optional)`: Specify whether compile scope dependencies should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
 * `<includeRuntimeDep> (Optional)`: Specify whether runtime scope dependencies should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.

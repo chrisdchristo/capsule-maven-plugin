@@ -87,49 +87,51 @@ public class CapsuleMojo extends AbstractMojo {
 	private String caplets;
 	@Parameter(property = "capsule.type")
 	private Type type = null;
-	@Parameter(property = "capsule.chmod", defaultValue = "false")
-	private String chmod = null;
-	@Parameter(property = "capsule.trampoline", defaultValue = "false")
-	private String trampoline = null;
+	@Parameter(property = "capsule.chmod")
+	private boolean chmod = false;
+	@Parameter(property = "capsule.trampoline")
+	private boolean trampoline = false;
+	@Parameter(property = "capsule.setManifestRepos")
+	private boolean setManifestRepos = false;
 
-	@Parameter(property = "capsule.includeApp", defaultValue = "true")
-	private boolean includeApp = false;
-	@Parameter(property = "capsule.includeTransitiveDep", defaultValue = "true")
-	private boolean includeTransitiveDep = false;
-	@Parameter(property = "capsule.includeCompileDep", defaultValue = "true")
-	private boolean includeCompileDep = false;
-	@Parameter(property = "capsule.includeRuntimeDep", defaultValue = "true")
-	private boolean includeRuntimeDep = false;
-	@Parameter(property = "capsule.includeProvidedDep", defaultValue = "false")
+	@Parameter(property = "capsule.includeApp")
+	private boolean includeApp = true;
+	@Parameter(property = "capsule.includeTransitiveDep")
+	private boolean includeTransitiveDep = true;
+	@Parameter(property = "capsule.includeCompileDep")
+	private boolean includeCompileDep = true;
+	@Parameter(property = "capsule.includeRuntimeDep")
+	private boolean includeRuntimeDep = true;
+	@Parameter(property = "capsule.includeProvidedDep")
 	private boolean includeProvidedDep = false;
-	@Parameter(property = "capsule.includeSystemDep", defaultValue = "false")
+	@Parameter(property = "capsule.includeSystemDep")
 	private boolean includeSystemDep = false;
-	@Parameter(property = "capsule.includeTestDep", defaultValue = "false")
+	@Parameter(property = "capsule.includeTestDep")
 	private boolean includeTestDep = false;
-	@Parameter(property = "capsule.includeOptionalDep", defaultValue = "false")
+	@Parameter(property = "capsule.includeOptionalDep")
 	private boolean includeOptionalDep = false;
 
-	@Parameter(property = "capsule.resolveApp", defaultValue = "false")
+	@Parameter(property = "capsule.resolveApp")
 	private boolean resolveApp = false;
-	@Parameter(property = "capsule.resolveTransitiveDep", defaultValue = "false")
+	@Parameter(property = "capsule.resolveTransitiveDep")
 	private boolean resolveTransitiveDep = false;
-	@Parameter(property = "capsule.resolveCompileDep", defaultValue = "false")
+	@Parameter(property = "capsule.resolveCompileDep")
 	private boolean resolveCompileDep = false;
-	@Parameter(property = "capsule.resolveRuntimeDep", defaultValue = "false")
+	@Parameter(property = "capsule.resolveRuntimeDep")
 	private boolean resolveRuntimeDep = false;
-	@Parameter(property = "capsule.resolveProvidedDep", defaultValue = "false")
+	@Parameter(property = "capsule.resolveProvidedDep")
 	private boolean resolveProvidedDep = false;
-	@Parameter(property = "capsule.resolveSystemDep", defaultValue = "false")
+	@Parameter(property = "capsule.resolveSystemDep")
 	private boolean resolveSystemDep = false;
-	@Parameter(property = "capsule.resolveTestDep", defaultValue = "false")
+	@Parameter(property = "capsule.resolveTestDep")
 	private boolean resolveTestDep = false;
-	@Parameter(property = "capsule.resolveOptionalDep", defaultValue = "false")
+	@Parameter(property = "capsule.resolveOptionalDep")
 	private boolean resolveOptionalDep = false;
 
 	@Parameter(property = "capsule.execPluginConfig")
 	private String execPluginConfig = null;
-	@Parameter(property = "capsule.customDescriptor", defaultValue = "-capsule")
-	private String customDescriptor = null;
+	@Parameter(property = "capsule.customDescriptor")
+	private String customDescriptor = "-capsule";
 	@Parameter
 	private Pair<String, String>[] properties = null; // System-Properties for the app
 	@Parameter
@@ -378,7 +380,7 @@ public class CapsuleMojo extends AbstractMojo {
 			mainAttributes.put(new Attributes.Name("Dependencies"), dependencyString);
 
 		final String repoString = repoString().trim();
-		if (!repoString.isEmpty())
+		if (!repoString.isEmpty() && setManifestRepos)
 			mainAttributes.put(new Attributes.Name("Repositories"), repoString);
 
 		// add MavenCapsule caplet (if needed) & others specified by user
@@ -639,14 +641,14 @@ public class CapsuleMojo extends AbstractMojo {
 	}
 
 	private void addChmodCopy(final File jar) throws IOException {
-		if (this.chmod.equals("true") || this.chmod.equals("1")) {
+		if (this.chmod) {
 			final File file = createExecCopyProcess(jar, EXEC_PREFIX, ".x");
 			info("[Capsule CHMOD]: " + file.getName());
 		}
 	}
 
 	private void addTrampolineCopy(final File jar) throws IOException {
-		if (this.trampoline.equals("true") || this.trampoline.equals("1")) {
+		if (this.trampoline) {
 			final File file = createExecCopyProcess(jar, EXEC_TRAMPOLINE_PREFIX, ".tx");
 			info("[Capsule Trampoline]: " + file.getName());
 		}
