@@ -766,6 +766,7 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<type>fat</type>
 		<chmod>true</chmod>
 		<trampoline>true</trampoline>
+		<setManifestRepos>true</setManifestRepos>
 
 		<includeApp>true</includeApp>
 		<includeCompileDep>true</includeCompileDep>
