@@ -319,36 +319,40 @@ public class CapsuleMojo extends AbstractMojo {
 	public void build() throws IOException {
 		final File jarFile = new File(this.outputDir, this.outputName + ".jar");
 
-		if (!jarFile.exists()) {
-			final JarOutputStream jarStream = new JarOutputStream(new FileOutputStream(jarFile));
-			info("[Capsule Jar File]: " + jarFile.getName());
-
-			// add manifest entries
-			addManifest(jarStream);
-
-			// add Capsule.class
-			addCapsuleClass(jarStream);
-
-			// add caplets - i.e custom capsule classes (if exists)
-			addCapletClasses(jarStream);
-
-			// add CapsuleMaven classes (if we need to do any resolving on launch)
-			addMavenCapletClasses(jarStream);
-
-			// add the app jar
-			addApp(jarStream);
-
-			// add the dependencies as embedded jars
-			addDependencies(jarStream);
-
-			// add some files and folders to the capsule from filesets and dependencysets
-			addFileSets(jarStream);
-			addDependencySets(jarStream);
-
-			IOUtil.close(jarStream);
-		} else {
-			info("EXISTS - " + jarFile.getName() + " (WILL NOT OVERWRITE)");
+		if (jarFile.exists()) {
+			info("EXISTS - " + jarFile.getName() + " (WILL OVERWRITE)");
+			final boolean deleteResult = jarFile.delete();
+			if (!deleteResult) {
+				warn("FAILED TO DELETE - " + jarFile.getName());
+			}
 		}
+
+		final JarOutputStream jarStream = new JarOutputStream(new FileOutputStream(jarFile));
+		info("[Capsule Jar File]: " + jarFile.getName());
+
+		// add manifest entries
+		addManifest(jarStream);
+
+		// add Capsule.class
+		addCapsuleClass(jarStream);
+
+		// add caplets - i.e custom capsule classes (if exists)
+		addCapletClasses(jarStream);
+
+		// add CapsuleMaven classes (if we need to do any resolving on launch)
+		addMavenCapletClasses(jarStream);
+
+		// add the app jar
+		addApp(jarStream);
+
+		// add the dependencies as embedded jars
+		addDependencies(jarStream);
+
+		// add some files and folders to the capsule from filesets and dependencysets
+		addFileSets(jarStream);
+		addDependencySets(jarStream);
+
+		IOUtil.close(jarStream);
 
 		// build the chmod version of the capsule
 		addChmodCopy(jarFile);
