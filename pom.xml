@@ -52,12 +52,12 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.version>1.7</java.version>
 
-		<maven.source.plugin.version>3.0.0</maven.source.plugin.version>
-		<maven.compiler.plugin.version>3.5.1</maven.compiler.plugin.version>
+		<maven.source.plugin.version>3.0.1</maven.source.plugin.version>
+		<maven.compiler.plugin.version>3.6.0</maven.compiler.plugin.version>
 		<maven.project.version>3.0-alpha-2</maven.project.version>
-		<maven.plugin.plugin.version>3.4</maven.plugin.plugin.version>
+		<maven.plugin.plugin.version>3.5</maven.plugin.plugin.version>
 		<maven.plugin.api.version>3.3.9</maven.plugin.api.version>
-		<maven.plugin.annotations.version>3.4</maven.plugin.annotations.version>
+		<maven.plugin.annotations.version>3.5</maven.plugin.annotations.version>
 		<maven.gpg.plugin.version>1.6</maven.gpg.plugin.version>
 		<aether.api.version>1.1.0</aether.api.version>
 	</properties>
