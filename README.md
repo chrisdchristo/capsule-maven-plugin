@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.5.0-blue.svg?style=flat)](https://github.com/chrisdchristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.5.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrisdchristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.4.3-blue.svg?style=flat)](https://github.com/chrisdchristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.4.3-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrisdchristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a [capsule](https://github.com/puniverse/capsule) out of your app.
