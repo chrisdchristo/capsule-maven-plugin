@@ -24,6 +24,11 @@ Supports [Capsule v1.0.3](https://github.com/puniverse/capsule/releases/tag/v1.0
 - [Capsule Contents](https://github.com/chrisdchristo/capsule-maven-plugin#capsule-contents)
 	- [The Simple Types](https://github.com/chrisdchristo/capsule-maven-plugin#the-simple-types)
 	- [Custom Builds](https://github.com/chrisdchristo/capsule-maven-plugin#custom-builds)
+	- [Including Dependencies based on source](https://github.com/chrisdchristo/capsule-maven-plugin#including-dependencies-based-on-source)
+	- [Including Dependencies based on scope](https://github.com/chrisdchristo/capsule-maven-plugin#including-dependencies-based-on-scope)
+	- [Include Optional Dependencies](https://github.com/chrisdchristo/capsule-maven-plugin#include-optional-dependencies)
+	- [Include Transitive Dependencies](https://github.com/chrisdchristo/capsule-maven-plugin#include-transitive-dependencies)
+	- [Understanding Dependency Scope](https://github.com/chrisdchristo/capsule-maven-plugin#understanding-dependency-scope)
 - [Runtime Resolution](https://github.com/chrisdchristo/capsule-maven-plugin#runtime-resolution)
 - [Really Executable Capsules](https://github.com/chrisdchristo/capsule-maven-plugin#really-executable-capsules-maclinux-only)
 - [Providing Your App System Properties](https://github.com/chrisdchristo/capsule-maven-plugin#providing-your-app-system-properties)
@@ -253,7 +258,7 @@ And similarly an ```empty``` capsule is done with the following:
 
 The source of dependencies is taken from two places. Firstly, from the ```<dependencies>``` tag defined under the root ```<project>``` tag, namely the app dependencies. Secondly the dependencies defines under the ```<dependencies>``` tag within the ```<plugin>``` tag for this plugin, also known as the plugin dependencies.
 
-You can choose to include a source by using ```<includeAppDep>true<includeAppDep>``` or ```<includePluginDep>true</includeAppDep>```.
+You can choose to include a source by using ```<includeAppDep>true</includeAppDep>``` or ```<includePluginDep>true</includeAppDep>```.
 
 
 ### Including Dependencies based on scope
@@ -289,9 +294,9 @@ or if you want to resolve them instead:
 
 So the above will not include the dependencies marked with ```runtime``` scope, however it will resolve them at launch.
 
-(Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```)
+Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```.
 
-### Including Optional Dependencies
+### Include Optional Dependencies
 
 Dependencies can be marked with the ```<optional>``` tag, for example:
 
@@ -319,7 +324,7 @@ or if you want to resolve them instead:
 </configuration>
 ```
 
-(Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```)
+Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```.
 
 ### Include Transitive Dependencies
 
@@ -341,7 +346,7 @@ or if you want to resolve them instead:
 </configuration>
 ```
 
-(Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```)
+Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```.
 
 ### Understanding Dependency Scope
 
