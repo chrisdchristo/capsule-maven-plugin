@@ -23,7 +23,6 @@ Supports [Capsule v1.0.3](https://github.com/puniverse/capsule/releases/tag/v1.0
 - [Building Automatically](https://github.com/chrisdchristo/capsule-maven-plugin#building-automatically)
 - [Capsule Contents](https://github.com/chrisdchristo/capsule-maven-plugin#capsule-contents)
 - [Runtime Resolution](https://github.com/chrisdchristo/capsule-maven-plugin#runtime-resolution)
-- [Excluding Dependencies](https://github.com/chrisdchristo/capsule-maven-plugin#excluding-dependencies)
 - [Really Executable Capsules](https://github.com/chrisdchristo/capsule-maven-plugin#really-executable-capsules-maclinux-only)
 - [Providing Your App System Properties](https://github.com/chrisdchristo/capsule-maven-plugin#providing-your-app-system-properties)
 - [Additional Manifest Entries](https://github.com/chrisdchristo/capsule-maven-plugin#additional-manifest-entries)
