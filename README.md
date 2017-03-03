@@ -22,6 +22,8 @@ Supports [Capsule v1.0.3](https://github.com/puniverse/capsule/releases/tag/v1.0
 - [Quick Start](https://github.com/chrisdchristo/capsule-maven-plugin#quick-start)
 - [Building Automatically](https://github.com/chrisdchristo/capsule-maven-plugin#building-automatically)
 - [Capsule Contents](https://github.com/chrisdchristo/capsule-maven-plugin#capsule-contents)
+	- [The Simple Types](https://github.com/chrisdchristo/capsule-maven-plugin#the-simple-types)
+	- [Custom Builds](https://github.com/chrisdchristo/capsule-maven-plugin#custom-builds)
 - [Runtime Resolution](https://github.com/chrisdchristo/capsule-maven-plugin#runtime-resolution)
 - [Really Executable Capsules](https://github.com/chrisdchristo/capsule-maven-plugin#really-executable-capsules-maclinux-only)
 - [Providing Your App System Properties](https://github.com/chrisdchristo/capsule-maven-plugin#providing-your-app-system-properties)
@@ -112,9 +114,9 @@ Or alternatively you could use the `maven-exec-plugin` to run your app (as you d
 
 Essentially Capsule can be packaged with as much or as little as you want.
 
-Two things you need to think about to make up a capsule, the app jar and the dependency jars. And these, as you will see, can be optionally included!
+Two things you need to think about to make up a capsule are, the app jar and the dependency jars. And these, as you will see, can be optionally included!
 
-The source of dependencies is taken from two places. Firstly, from the ```<dependencies>``` tag defined under the root ```<project>``` tag, namely the app dependencies. Secondly the dependencies defines under the ```<dependencies>``` tag within the ```<plugin>``` tag for this plugin, also known as the plugin dependencies.
+The source of dependencies is taken from two places. Firstly, from the ```<dependencies>``` tag defined under the root ```<project>``` tag, namely the app dependencies. Secondly the dependencies defined under the ```<dependencies>``` tag within the ```<plugin>``` tag for this plugin, also known as the plugin dependencies.
 
 You have the option to include all, none or some of the dependencies.
 
