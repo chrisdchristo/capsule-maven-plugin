@@ -53,7 +53,7 @@
 		<java.version>1.7</java.version>
 
 		<maven.source.plugin.version>3.0.1</maven.source.plugin.version>
-		<maven.compiler.plugin.version>3.6.0</maven.compiler.plugin.version>
+		<maven.compiler.plugin.version>3.6.1</maven.compiler.plugin.version>
 		<maven.project.version>3.0-alpha-2</maven.project.version>
 		<maven.plugin.plugin.version>3.5</maven.plugin.plugin.version>
 		<maven.plugin.api.version>3.3.9</maven.plugin.api.version>
