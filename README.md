@@ -1,8 +1,8 @@
 Capsule Maven Plugin
 ====================
 
-[![Version](http://img.shields.io/badge/version-1.4.3-blue.svg?style=flat)](https://github.com/chrisdchristo/capsule-maven-plugin/releases)
-[![Maven Central](http://img.shields.io/badge/maven_central-1.4.3-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrisdchristo/capsule-maven-plugin/)
+[![Version](http://img.shields.io/badge/version-1.5.0-blue.svg?style=flat)](https://github.com/chrisdchristo/capsule-maven-plugin/releases)
+[![Maven Central](http://img.shields.io/badge/maven_central-1.5.0-blue.svg?style=flat)](http://mvnrepository.com/artifact/com.github.chrisdchristo/capsule-maven-plugin/)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](http://opensource.org/licenses/MIT)
 
 A maven plugin to build a [capsule](https://github.com/puniverse/capsule) out of your app.
@@ -18,7 +18,25 @@ Requires java version 1.7+ and maven 3.1.x+
 
 Supports [Capsule v1.0.3](https://github.com/puniverse/capsule/releases/tag/v1.0.3) & [CapsuleMaven v1.0.3](https://github.com/puniverse/capsule-maven/releases/tag/v1.0.3) and below (It may also support new versions of Capsule, but use at your own risk).
 
-#### Building from source
+- [Building From Source](https://github.com/chrisdchristo/capsule-maven-plugin#building-from-source)
+- [Quick Start](https://github.com/chrisdchristo/capsule-maven-plugin#quick-start)
+- [Building Automatically](https://github.com/chrisdchristo/capsule-maven-plugin#building-automatically)
+- [Capsule Contents](https://github.com/chrisdchristo/capsule-maven-plugin#capsule-contents)
+- [Runtime Resolution](https://github.com/chrisdchristo/capsule-maven-plugin#runtime-resolution)
+- [Excluding Dependencies](https://github.com/chrisdchristo/capsule-maven-plugin#excluding-dependencies)
+- [Really Executable Capsules](https://github.com/chrisdchristo/capsule-maven-plugin#really-executable-capsules-maclinux-only)
+- [Providing Your App System Properties](https://github.com/chrisdchristo/capsule-maven-plugin#providing-your-app-system-properties)
+- [Additional Manifest Entries](https://github.com/chrisdchristo/capsule-maven-plugin#additional-manifest-entries)
+- [Custom File Name](https://github.com/chrisdchristo/capsule-maven-plugin#custom-file-name)
+- [Modes](https://github.com/chrisdchristo/capsule-maven-plugin#modes)
+- [FileSets and DependencySets](https://github.com/chrisdchristo/capsule-maven-plugin#filesets-and-dependencysets)
+- [Custom Capsule Version](https://github.com/chrisdchristo/capsule-maven-plugin#custom-capsule-version)
+- [Caplets](https://github.com/chrisdchristo/capsule-maven-plugin#caplets)
+- [Maven Exec Plugin Integration](https://github.com/chrisdchristo/capsule-maven-plugin#maven-exec-plugin-integration)
+- [Reference](https://github.com/chrisdchristo/capsule-maven-plugin#reference)
+
+## Building From source
+
 Clone the project and run a maven install:
 
 ```
@@ -28,6 +46,7 @@ mvn install
 ```
 
 Alternatively you can let maven pick up the latest version from [maven central](http://mvnrepository.com/artifact/chrisdchristo/capsule-maven-plugin).
+
 
 ## Quick Start
 
@@ -444,28 +463,32 @@ Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Depe
 
 ## Custom File Name
 
-The output capsule jar's name is as per the `<finalName>` tag with the appending of the ```customDescriptor```. By default the ```customDescriptor``` is ```-cap```.
+The output capsule jar's name is as per the `<finalName>` tag with the appending of the ```-capsule```, by default.
+
+Essentially this is ```<finalName>-capsule.jar``` so for example your app might be ```app-capsule.jar```.
+
+If you wish to have custom text, then you can optionally set either of parameters ```fileName``` and ```fileDesc``` which make up the format:
 
 ```
-<finalName><customDescriptor>.jar
+<fileName><fileDesc>.jar
 ```
 
-So for example if you'd like to have your output capsule jar like 'my-amazing-app-capsule.jar' then you would do the following:
+So for example if you'd like to have your output capsule jar like 'my-amazing-app-cap.jar' then you would do the following:
 
 ```
 <build>
-	<finalName>my-amazing-app</finalName>
-	<plugins>
-		<plugin>
+  <plugins>
+    <plugin>
       <groupId>com.github.chrisdchristo</groupId>
       <artifactId>capsule-maven-plugin</artifactId>
       <version>${capsule.maven.plugin.version}</version>
       <configuration>
-	      <appClass>hello.HelloWorld</appClass>
-	      <customDescriptor>-capsule</customDescriptor>
-	    </configuration>
-		</plugin>
-	</plugins>
+				<appClass>hello.HelloWorld</appClass>
+				<fileName>my-amazing-app</fileName>
+				<fileDesc>-cap</fileDesc>
+      </configuration>
+    </plugin>
+  </plugins>
 </build>
 ```
 
@@ -748,7 +771,8 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrisdchristo/capsule-maven-plugin#filesets-and-dependencysets).
 * `<dependencySets> (Optional)`: Define a set of `<dependencySet>` to copy over files contained within remote dependencies into the capsule. [See more here](https://github.com/chrisdchristo/capsule-maven-plugin#filesets-and-dependencysets).
 * `<caplets> (Optional)`: Define a list of caplets (custom Capsule classes). [See more here](https://github.com/chrisdchristo/capsule-maven-plugin#caplets).
-* `<customDescriptor> (Optional)`: The custom text for the descriptor part of the name of the output jar. This combined with the `<finalName>` tag creates the output name of the jar.
+* `<fileName> (Optional)`: The custom text for the file name part of the name of the output jar. By default this is ```<finalName>````.
+* `<fileDesc> (Optional)`: The custom text for the descriptor part of the name of the output jar. This combined with the ```<fileName>``` tag creates the output name of the jar.
 
 ```
 <!-- BUILD CAPSULES -->
@@ -786,8 +810,8 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<resolveTransitiveDep>false</resolveTransitiveDep>
 
 		<execPluginConfig>root</execPluginConfig>
-		<customDescriptor>-cap</customDescriptor>
-
+		<fileName>my-amazing-app</fileName>
+		<fileDesc>-cap</fileDesc>
 
 		<properties>
 			<property>

@@ -130,8 +130,10 @@ public class CapsuleMojo extends AbstractMojo {
 
 	@Parameter(property = "capsule.execPluginConfig")
 	private String execPluginConfig = null;
-	@Parameter(property = "capsule.customDescriptor")
-	private String customDescriptor = "-capsule";
+	@Parameter(property = "capsule.fileName")
+	private String fileName = null;
+	@Parameter(property = "capsule.fileDesc")
+	private String fileDesc = "-capsule";
 	@Parameter
 	private Pair<String, String>[] properties = null; // System-Properties for the app
 	@Parameter
@@ -234,8 +236,8 @@ public class CapsuleMojo extends AbstractMojo {
 			throw new MojoFailureException(LOG_PREFIX + " appClass not set (or could not be obtained from the exec plugin mainClass)");
 
 		// resolve outputDir name (the file name of the capsule jar)
-		this.outputName = this.finalName;
-		if (this.customDescriptor != null) outputName += this.customDescriptor;
+		this.outputName = this.fileName != null ? this.fileName : this.finalName;
+		if (this.fileDesc != null) outputName += this.fileDesc;
 
 		// check for caplets existence
 		if (this.caplets == null) this.caplets = "";
