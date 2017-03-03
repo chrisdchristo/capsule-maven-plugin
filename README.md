@@ -113,7 +113,13 @@ Or alternatively you could use the `maven-exec-plugin` to run your app (as you d
 
 Essentially Capsule can be packaged with as much or as little as you want.
 
-You have the option to include all, none or some of the dependencies. This can be done based on their ```scope```, their ```optional``` flag and if they are direct (root) or indirect (transitive) dependencies.
+Two things you need to think about to make up a capsule, the app jar and the dependency jars. And these, as you will see, can be optionally included!
+
+The source of dependencies is taken from two places. Firstly, from the ```<dependencies>``` tag defined under the root ```<project>``` tag, namely the app dependencies. Secondly the dependencies defines under the ```<dependencies>``` tag within the ```<plugin>``` tag for this plugin, also known as the plugin dependencies.
+
+You have the option to include all, none or some of the dependencies.
+
+This can be done with various flags as you will see later, based on their source, scope, their ```optional``` flag and if they are direct (root) or indirect (transitive) dependencies.
 
 ### The Simple Types
 
@@ -167,7 +173,7 @@ And similarly for ```thin``` and ```empty```:
 
 Note that the the three simple types apply to only the ```compile``` and ```runtime``` scoped dependencies (but cover the transitive dependencies). More on this later.
 
-If none of these quite fit then the plugin can accommodate a wide range of different setups, its encouraged you build the capsule with your own specific requirements without being bogged down on the three specific types listed above.
+If none of these quite fit, then the plugin can accommodate a wide range of different setups, its encouraged you build the capsule with your own specific requirements without being bogged down on the three specific types listed above.
 
 ### Custom Builds
 
@@ -175,37 +181,44 @@ If none of these quite fit then the plugin can accommodate a wide range of diffe
 
 If the types defined in the ```<type>``` don't quite fit your needs and you need something a little different, then you can easily customise the jar to a vast array of options.
 
-Essentially it comes down to the following scenarios; whether or not to include the app or resolve it at runtime; what dependencies to include based on their scope and which to resolve at runtime; and same question for the transitive dependencies.
+Essentially it comes down to the following scenarios; whether or not to include the app or resolve it at runtime; what dependencies to include based on their source, scope etc and which to resolve at runtime; and same question for the transitive dependencies.
 
 So to cover all these ideas, you have the following flags:
 
 ```
 <includeApp>false</includeApp>
+<includeAppDep>false</includeAppDep>
+<includePluginDep>false</includePluginDep>
+<includeTransitiveDep>false</includeTransitiveDep>
 <includeCompileDep>false</includeCompileDep>
 <includeRuntimeDep>false</includeRuntimeDep>
 <includeProvidedDep>false</includeProvidedDep>
 <includeSystemDep>false</includeSystemDep>
 <includeTestDep>false</includeTestDep>
-<includeTransitiveDep>false</includeTransitiveDep>
 <includeOptionalDep>false</includeOptionalDep>
 
 <resolveApp>false</resolveApp>
+<resolveAppDep>false</resolveAppDep>
+<resolvePluginDep>false</resolvePluginDep>
+<resolveTransitiveDep>false</resolveTransitiveDep>
 <resolveCompileDep>false</resolveCompileDep>
 <resolveRuntimeDep>false</resolveRuntimeDep>
 <resolveProvidedDep>false</resolveProvidedDep>
 <resolveSystemDep>false</resolveSystemDep>
 <resolveTestDep>false</resolveTestDep>
-<resolveTransitiveDep>false</resolveTransitiveDep>
+<resolveOptionalDep>false</resolveOptionalDep>
 ```
 
 All of the above settings are ```false``` by default.
 
-These ```includeXYZ``` flags essentially tell the plugin what to include in the jar. Of course if there are any of these that you exclude from the capsule jar, and in turn they are needed for the launch, then runtime resolution will be needed by marking some ```resolveXYZ``` to ```true```.
+These ```includeXYZ``` flags essentially tell the plugin what to include/embed in the jar. Of course if there are any of these that you exclude from the capsule jar, and in turn they are needed for the launch, then runtime resolution will be needed by marking some ```resolveXYZ``` to ```true```.
 
 A ```fat``` capsule essentially is equivalent to having only the following set to ```true```:
 
 ```
 <includeApp>true</includeApp>
+<includeAppDep>true</includeAppDep>
+<includePluginDep>true</includePluginDep>
 <includeCompileDep>true</includeCompileDep>
 <includeRuntimeDep>true</includeRuntimeDep>
 <includeTransitiveDep>true</includeTransitiveDep>
@@ -217,6 +230,8 @@ So if a ```thin``` capsule is desired, it can be done like so:
 
 ```
 <includeApp>true</includeApp>
+<resolveAppDep>true</resolveAppDep>
+<resolvePluginDep>true</resolvePluginDep>
 <resolveCompileDep>true</resolveCompileDep>
 <resolveRuntimeDep>true</resolveRuntimeDep>
 <resolveTransitiveDep>true</resolveTransitiveDep>
@@ -226,32 +241,23 @@ And similarly an ```empty``` capsule is done with the following:
 
 ```
 <resolveApp>true</resolveApp>
+<resolveAppDep>true</resolveAppDep>
+<resolvePluginDep>true</resolvePluginDep>
 <resolveCompileDep>true</resolveCompileDep>
 <resolveRuntimeDep>true</resolveRuntimeDep>
 <resolveTransitiveDep>true</resolveTransitiveDep>
 ```
 
-## Runtime Resolution
+### Including Dependencies based on source
 
-To perform the resolution at runtime (such as needed by the ```thin``` and ```empty``` types), the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory if any dependencies (or the app itself) needs to be resolved at runtime.
+The source of dependencies is taken from two places. Firstly, from the ```<dependencies>``` tag defined under the root ```<project>``` tag, namely the app dependencies. Secondly the dependencies defines under the ```<dependencies>``` tag within the ```<plugin>``` tag for this plugin, also known as the plugin dependencies.
 
-To build the capsule without this additional code, make sure none of the ```resolveXYZ``` flags are set to true (by default all set to false or the ```<type>``` is set to ```fat```).
+You can choose to include a source by using ```<includeAppDep>true<includeAppDep>``` or ```<includePluginDep>true</includeAppDep>```.
 
-If making a custom build and resolution is needed at runtime, then add the desired ```resolveXYZ``` tags in the ```<configuration>``` tag like so:
 
-```
-<configuration>
-	<appClass>hello.HelloWorld</appClass>
-	<resolveApp>true<resolveApp>
-	<resolveCompileDep>true<resolveCompileDep>
-</configuration>
-```
+### Including Dependencies based on scope
 
-## Excluding Dependencies
-
-Certain scenarios desire the case where only certain dependencies are included in the built capsule (and the others resolved at runtime).
-
-You can exclude certain dependencies by scoping them out, or in other words setting the scope of the dependency to something that you will not be including in the built capsule.
+You can include certain dependencies by setting the scope of the dependency to something that you will be including in the built capsule.
 
 So you could set your dependency to scope ```runtime``` like so:
 
@@ -268,19 +274,25 @@ And then mark the necessary flags:
 
 ```
 <configuration>
-	<appClass>hello.HelloWorld</appClass>
-	<includeRuntimeDep>false<includeRuntimeDep>
-	<resolveRuntimeDep>true<resolveRuntimeDep>
+	<includeRuntimeDep>true</includeRuntimeDep>
+</configuration>
+```
+
+or if you want to resolve them instead:
+
+```
+<configuration>
+	<resolveRuntimeDep>true</resolveRuntimeDep>
 </configuration>
 ```
 
 So the above will not include the dependencies marked with ```runtime``` scope, however it will resolve them at launch.
 
+(Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```)
+
 ### Including Optional Dependencies
 
-By default, the plugin will not embed dependencies marked `<optional>true</optional>`.
-
-So, for example an optional dependency is declared like so:
+Dependencies can be marked with the ```<optional>``` tag, for example:
 
 ```
 <dependency>
@@ -294,25 +306,41 @@ To include optional dependencies in the capsule, you simply need to turn on a fl
 
 ```
 <configuration>
-	<appClass>hello.HelloWorld</appClass>
 	<includeOptionalDep>true</includeOptionalDep>
 </configuration>
 ```
 
-### Excluding Transitive Dependencies
-
-By default, the plugin will embed the dependencies and their transitive dependencies (i.e dependencies of dependencies), as they will also be required to run the app.
-
-However if transitive dependencies are not desired then this can be turned off. Simply set the configuration property `includeTransitiveDep` to false:
+or if you want to resolve them instead:
 
 ```
 <configuration>
-	<appClass>hello.HelloWorld</appClass>
-	<includeTransitiveDep>false</includeTransitiveDep>
+	<resolveOptionalDep>true</resolveOptionalDep>
 </configuration>
 ```
 
-(if you do do this however, you will probably want to set the ```resolveTransitiveDep``` flag to true.)
+(Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```)
+
+### Include Transitive Dependencies
+
+Transitive dependencies are essentially the deep dependencies or in other wors the dependencies of your dependencies.
+
+You can include transitive dependencies by setting the configuration property `includeTransitiveDep` to true:
+
+```
+<configuration>
+	<includeTransitiveDep>true</includeTransitiveDep>
+</configuration>
+```
+
+or if you want to resolve them instead:
+
+```
+<configuration>
+	<resolveTransitiveDep>true</resolveTransitiveDep>
+</configuration>
+```
+
+(Just make sure you have a source also set to true for example, ```<includeAppDep>true<includeAppDep>``` or ```<resolveAppDep>true<resolveAppDep>```)
 
 ### Understanding Dependency Scope
 
@@ -341,6 +369,24 @@ So for each direct dependency with scope:
 
 So, all the ```includeXYZ``` and ```resolveXYZ``` follow the above rules.
 
+
+
+
+## Runtime Resolution
+
+To perform the resolution at runtime (such as needed by the ```thin``` and ```empty``` types), the capsule will include the necessary code to do this (namely the ```MavenCaplet```). This adds slightly to the overall file size of the generated capsule jar. This additional code is obviously mandatory if any dependencies (or the app itself) needs to be resolved at runtime.
+
+To build the capsule without this additional code, make sure none of the ```resolveXYZ``` flags are set to true (by default all set to false or the ```<type>``` is set to ```fat```).
+
+If making a custom build and resolution is needed at runtime, then add the desired ```resolveXYZ``` tags in the ```<configuration>``` tag like so:
+
+```
+<configuration>
+	<appClass>hello.HelloWorld</appClass>
+	<resolveApp>true<resolveApp>
+	<resolveCompileDep>true<resolveCompileDep>
+</configuration>
+```
 
 ## Really Executable Capsules (Mac/Linux only)
 
@@ -752,20 +798,25 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 * `<type> (Optional)`: Can be either ```empty```, ```thin``` or ```fat```. Tells the plugin to build a capsule based on of these predefined builds. If present, the plugin will ignore all of the ```<includeXYZ>``` and ```<resolveXYZ>```.
 * `<setManifestRepos> (Optional)`: Can either be ```true``` or ```false```, default is ```false```. This will append a manifest entry ```Repositories``` with values as defined by the project's ```pom.xml```.
 * `<includeApp> (Optional)`: Specify whether the app itself should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
-* `<includeCompileDep> (Optional)`: Specify whether compile scope dependencies should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
-* `<includeRuntimeDep> (Optional)`: Specify whether runtime scope dependencies should be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
+* `<includeAppDep> (Optional)`: Specify whether normal app dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
+* `<includePluginDep> (Optional)`: Specify whether the plugin dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
+* `<includeTransitiveDep> (Optional)`: Specify whether transitive dependencies should also be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
+* `<includeCompileDep> (Optional)`: Specify whether compile scope dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
+* `<includeRuntimeDep> (Optional)`: Specify whether runtime scope dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
 * `<includeProvidedDep> (Optional)`: Specify whether provided scope dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
 * `<includeSystemDep> (Optional)`: Specify whether system scope dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
 * `<includeTestDep> (Optional)`: Specify whether test scope dependencies should be embedded. Default is false. Also, this is ignored if ```<type>``` is present.
-* `<includeTransitiveDep> (Optional)`: Specify whether transitive dependencies should also be embedded. Default is true. Also, this is ignored if ```<type>``` is present.
 * `<includeOptionalDep> (Optional)`: Specify whether optional dependencies should also be embedded. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<resolveApp> (Optional)`: Specifies whether the app should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveAppDep> (Optional)`: Specifies whether the app dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolvePluginDep> (Optional)`: Specifies whether the plugin dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveTransitiveDep> (Optional)`: Specifies whether the transitive dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<resolveCompileDep> (Optional)`: Specifies whether the compile scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<resolveRuntimeDep> (Optional)`: Specifies whether the runtime scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<resolveProvidedDep> (Optional)`: Specifies whether the system scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<resolveSystemDep> (Optional)`: Specifies whether the system scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<resolveTestDep> (Optional)`: Specifies whether the test scoped dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
-* `<resolveTransitiveDep> (Optional)`: Specifies whether the transitive dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
+* `<resolveOptionalDep> (Optional)`: Specifies whether the optional dependencies should be resolved at launch. The default is false. Also, this is ignored if ```<type>``` is present.
 * `<manifest> (Optional)`: The set of additional manifest entries, for e.g `JVM-Args`. See [capsule](http://www.capsule.io/reference/) for an exhaustive list. Note you do **not** need `Main-Class`, `Application-Class`, `Application`, `Dependencies` and `System-Properties` as these are generated automatically.
 * `<modes> (Optional)`: Define a set of `<mode>` with its own set of `<properties>` and `<manifest>` entries to categorise the capsule into different modes. The mode can be set at runtime. [See more here](https://github.com/chrisdchristo/capsule-maven-plugin#modes).
 * `<fileSets> (Optional)`: Define a set of `<fileSet>` to copy over files into the capsule. [See more here](https://github.com/chrisdchristo/capsule-maven-plugin#filesets-and-dependencysets).
@@ -793,21 +844,26 @@ Note that if you do specify the `<appClass>`, `<properties>` or `JVM-Args` (in t
 		<setManifestRepos>true</setManifestRepos>
 
 		<includeApp>true</includeApp>
-		<includeCompileDep>true</includeCompileDep>
-		<includeRuntimeDep>true</includeRuntimeDep>
+		<includeAppDep>false</includeAppDep>
+		<includePluginDep>false</includePluginDep>
+		<includeTransitiveDep>false</includeTransitiveDep>
+		<includeCompileDep>false</includeCompileDep>
+		<includeRuntimeDep>false</includeRuntimeDep>
 		<includeProvidedDep>false</includeProvidedDep>
 		<includeSystemDep>false</includeSystemDep>
 		<includeTestDep>false</includeTestDep>
-		<includeTransitiveDep>true</includeTransitiveDep>
-		<includeOptionalDep>true</includeOptionalDep>
+		<includeOptionalDep>false</includeOptionalDep>
 
 		<resolveApp>false</resolveApp>
+		<resolveAppDep>false</resolveAppDep>
+		<resolvePluginDep>false</resolvePluginDep>
+		<resolveTransitiveDep>false</resolveTransitiveDep>
 		<resolveCompileDep>false</resolveCompileDep>
 		<resolveRuntimeDep>false</resolveRuntimeDep>
 		<resolveProvidedDep>false</resolveProvidedDep>
 		<resolveSystemDep>false</resolveSystemDep>
 		<resolveTestDep>false</resolveTestDep>
-		<resolveTransitiveDep>false</resolveTransitiveDep>
+		<resolveOptionalDep>false</resolveOptionalDep>
 
 		<execPluginConfig>root</execPluginConfig>
 		<fileName>my-amazing-app</fileName>

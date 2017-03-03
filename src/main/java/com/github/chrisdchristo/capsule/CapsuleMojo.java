@@ -96,12 +96,16 @@ public class CapsuleMojo extends AbstractMojo {
 
 	@Parameter(property = "capsule.includeApp")
 	private boolean includeApp = true;
+	@Parameter(property = "capsule.includeAppDep")
+	private boolean includeAppDep = false;
+	@Parameter(property = "capsule.includePluginDep")
+	private boolean includePluginDep = false;
 	@Parameter(property = "capsule.includeTransitiveDep")
-	private boolean includeTransitiveDep = true;
+	private boolean includeTransitiveDep = false;
 	@Parameter(property = "capsule.includeCompileDep")
-	private boolean includeCompileDep = true;
+	private boolean includeCompileDep = false;
 	@Parameter(property = "capsule.includeRuntimeDep")
-	private boolean includeRuntimeDep = true;
+	private boolean includeRuntimeDep = false;
 	@Parameter(property = "capsule.includeProvidedDep")
 	private boolean includeProvidedDep = false;
 	@Parameter(property = "capsule.includeSystemDep")
@@ -113,6 +117,10 @@ public class CapsuleMojo extends AbstractMojo {
 
 	@Parameter(property = "capsule.resolveApp")
 	private boolean resolveApp = false;
+	@Parameter(property = "capsule.resolveAppDep")
+	private boolean resolveAppDep = false;
+	@Parameter(property = "capsule.resolvePluginDep")
+	private boolean resolvePluginDep = false;
 	@Parameter(property = "capsule.resolveTransitiveDep")
 	private boolean resolveTransitiveDep = false;
 	@Parameter(property = "capsule.resolveCompileDep")
@@ -158,6 +166,8 @@ public class CapsuleMojo extends AbstractMojo {
 		// check for type (this overrides custom behaviour)
 		if (type == Type.empty) {
 			includeApp = false;
+			includeAppDep = false;
+			includePluginDep = false;
 			includeTransitiveDep = false;
 			includeCompileDep = false;
 			includeRuntimeDep = false;
@@ -166,6 +176,8 @@ public class CapsuleMojo extends AbstractMojo {
 			includeTestDep = false;
 			includeOptionalDep = false;
 			resolveApp = true;
+			resolveAppDep = true;
+			resolvePluginDep = true;
 			resolveTransitiveDep = true;
 			resolveCompileDep = true;
 			resolveRuntimeDep = true;
@@ -175,6 +187,8 @@ public class CapsuleMojo extends AbstractMojo {
 			resolveOptionalDep = false;
 		} else if (type == Type.thin) {
 			includeApp = true;
+			includeAppDep = false;
+			includePluginDep = false;
 			includeTransitiveDep = false;
 			includeCompileDep = false;
 			includeRuntimeDep = false;
@@ -183,6 +197,8 @@ public class CapsuleMojo extends AbstractMojo {
 			includeTestDep = false;
 			includeOptionalDep = false;
 			resolveApp = false;
+			resolveAppDep = true;
+			resolvePluginDep = true;
 			resolveTransitiveDep = true;
 			resolveCompileDep = true;
 			resolveRuntimeDep = true;
@@ -192,6 +208,8 @@ public class CapsuleMojo extends AbstractMojo {
 			resolveOptionalDep = false;
 		} else if (type == Type.fat) {
 			includeApp = true;
+			includeAppDep = true;
+			includePluginDep = true;
 			includeTransitiveDep = true;
 			includeCompileDep = true;
 			includeRuntimeDep = true;
@@ -200,6 +218,8 @@ public class CapsuleMojo extends AbstractMojo {
 			includeTestDep = false;
 			includeOptionalDep = false;
 			resolveApp = false;
+			resolveAppDep = false;
+			resolvePluginDep = false;
 			resolveTransitiveDep = false;
 			resolveCompileDep = false;
 			resolveRuntimeDep = false;
