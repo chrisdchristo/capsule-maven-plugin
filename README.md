@@ -483,9 +483,9 @@ So for example if you'd like to have your output capsule jar like 'my-amazing-ap
       <artifactId>capsule-maven-plugin</artifactId>
       <version>${capsule.maven.plugin.version}</version>
       <configuration>
-				<appClass>hello.HelloWorld</appClass>
-				<fileName>my-amazing-app</fileName>
-				<fileDesc>-cap</fileDesc>
+        <appClass>hello.HelloWorld</appClass>
+        <fileName>my-amazing-app</fileName>
+        <fileDesc>-cap</fileDesc>
       </configuration>
     </plugin>
   </plugins>
