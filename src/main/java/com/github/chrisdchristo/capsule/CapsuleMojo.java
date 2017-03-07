@@ -2,23 +2,22 @@ package com.github.chrisdchristo.capsule;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Exclusion;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.*;
-import org.apache.maven.project.DefaultMavenProjectHelper;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.MavenProjectHelper;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.resolution.*;
+import org.eclipse.aether.resolution.ArtifactResult;
+import org.eclipse.aether.resolution.VersionRangeRequest;
+import org.eclipse.aether.resolution.VersionRangeResolutionException;
+import org.eclipse.aether.resolution.VersionRangeResult;
 
 import java.io.*;
 import java.nio.file.FileVisitResult;
@@ -29,13 +28,13 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.jar.*;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.TEST, requiresDependencyResolution
 	= ResolutionScope.RUNTIME_PLUS_SYSTEM)
-public class CapsuleMojo extends AbstractMojo {
+public class CapsuleMojo extends SuperMojo {
 
-	private String LOG_PREFIX = "[CapsuleMavenPlugin] ";
+	public final String pluginKey() { return "com.github.chrisdchristo:capsule-maven-plugin"; }
+	public final String logPrefix() { return "[CapsuleMavenPlugin] "; }
 
 	private static final String DEFAULT_CAPSULE_VERSION = "1.0.3";
 	private static final String DEFAULT_CAPSULE_MAVEN_VERSION = "1.0.3";
@@ -50,27 +49,6 @@ public class CapsuleMojo extends AbstractMojo {
 	private static final String EXEC_TRAMPOLINE_PREFIX = "#!/bin/sh\n\nexec java -Dcapsule.trampoline -jar \"$0\" \"$@\"\n\n";
 
 	private static final String EXEC_PLUGIN_KEY = "org.codehaus.mojo:exec-maven-plugin";
-
-	private final MavenProjectHelper helper = new DefaultMavenProjectHelper();
-
-	@Parameter(defaultValue = "${project}", readonly = true)
-	private MavenProject project = null;
-
-	/**
-	 * AETHER REPO LINK
-	 */
-	@Component
-	private RepositorySystem repoSystem = null;
-	@Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
-	private RepositorySystemSession repoSession = null;
-	@Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
-	private List<RemoteRepository> remoteRepos = null;
-	@Parameter(defaultValue = "${project.build.finalName}", readonly = true)
-	private String finalName = null;
-	@Parameter(defaultValue = "${project.build.directory}")
-	private File buildDir = null;
-	@Parameter(defaultValue = "${project.basedir}")
-	private File baseDir = null;
 
 	/**
 	 * OPTIONAL VARIABLES
@@ -163,6 +141,21 @@ public class CapsuleMojo extends AbstractMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 
+//		System.out.println("PLUGIN-LIST:");
+//		for (final Dependency dep : this.plugin.getDependencies()) {
+//			System.out.println(coords(dep) + dep.getScope());
+//		}
+//
+//		System.out.println("PLUGIN-DIRECT-DEPENDENCIES:");
+//		for (final Dependency dep : pluginDirectDependencies()) {
+//			System.out.println(coords(dep) + dep.getScope());
+//		}
+//
+//		System.out.println("PLUGIN-DEPENDENCIES:");
+//		for (final Dependency dep : pluginDependencies()) {
+//			System.out.println(coords(dep) + "(" + dep.getScope() + ")");
+//		}
+
 		// check for type (this overrides custom behaviour)
 		if (type == Type.empty) {
 			includeApp = false;
@@ -253,7 +246,7 @@ public class CapsuleMojo extends AbstractMojo {
 
 		// fail if no app class
 		if (appClass == null)
-			throw new MojoFailureException(LOG_PREFIX + " appClass not set (or could not be obtained from the exec plugin mainClass)");
+			throw new MojoFailureException(logPrefix() + " appClass not set (or could not be obtained from the exec plugin mainClass)");
 
 		// resolve outputDir name (the file name of the capsule jar)
 		this.outputName = this.fileName != null ? this.fileName : this.finalName;
@@ -443,7 +436,7 @@ public class CapsuleMojo extends AbstractMojo {
 		// mode sections
 		if (this.modes != null) {
 			for (final Mode mode : this.modes) {
-				if (mode.name == null) getLog().warn(LOG_PREFIX + "Mode defined without name, ignoring.");
+				if (mode.name == null) warn("Mode defined without name, ignoring.");
 				else {
 					final Attributes modeAttributes = new Attributes();
 					// add manifest entries to the mode section (these entries will override the manifests' main entries if mode is selected at runtime)
@@ -545,7 +538,7 @@ public class CapsuleMojo extends AbstractMojo {
 	private void addDependencies(final JarOutputStream jar) throws IOException {
 
 		// go through dependencies
-		final Set<Artifact> artifacts = includeTransitiveDep ? dependencyArtifacts() : directDependencyArtifacts();
+		final Set<Artifact> artifacts = includeTransitiveDep ? includedDependencyArtifacts() : includedDirectDependencyArtifacts();
 
 		for (final Artifact artifact : artifacts) {
 
@@ -685,6 +678,8 @@ public class CapsuleMojo extends AbstractMojo {
 	private String buildInfoString() {
 		final StringBuilder builder = new StringBuilder();
 		if (includeApp) builder.append("includeApp ");
+		if (includeAppDep) builder.append("includeAppDep ");
+		if (includePluginDep) builder.append("includePluginDep ");
 		if (includeCompileDep) builder.append("includeCompileDep ");
 		if (includeRuntimeDep) builder.append("includeRuntimeDep ");
 		if (includeProvidedDep) builder.append("includeProvidedDep ");
@@ -693,6 +688,8 @@ public class CapsuleMojo extends AbstractMojo {
 		if (includeTransitiveDep) builder.append("includeTransitiveDep ");
 
 		if (resolveApp) builder.append("resolveApp ");
+		if (resolveAppDep) builder.append("resolveAppDep ");
+		if (resolvePluginDep) builder.append("resolvePluginDep ");
 		if (resolveCompileDep) builder.append("resolveCompileDep ");
 		if (resolveRuntimeDep) builder.append("resolveRuntimeDep ");
 		if (resolveProvidedDep) builder.append("resolveProvidedDep ");
@@ -716,7 +713,7 @@ public class CapsuleMojo extends AbstractMojo {
 		if (includeApp) artifactList.append(coords(project.getArtifact())).append(" ");
 
 		// go through artifacts
-		final List<Dependency> dependencies = includeTransitiveDep ? dependencies() : directDependencies();
+		final Set<Dependency> dependencies = includeTransitiveDep ? includedDependencies() : includedDirectDependencies();
 
 		for (final Dependency dependency : dependencies) {
 
@@ -751,7 +748,7 @@ public class CapsuleMojo extends AbstractMojo {
 			dependenciesList.append(coords(this.project.getArtifact())).append(" ");
 
 		// go through dependencies
-		final List<Dependency> dependencies = resolveTransitiveDep ? dependencies() : directDependencies();
+		final Set<Dependency> dependencies = resolveTransitiveDep ? resolvedDependencies() : resolvedDirectDependencies();
 
 		for (final Dependency dependency : dependencies) {
 
@@ -812,72 +809,6 @@ public class CapsuleMojo extends AbstractMojo {
 		return propertiesList == null ? null : propertiesList.toString().trim();
 	}
 
-	private String coords(final String groupId, final String artifactId, final String classifier, final String version) {
-		final StringBuilder coords = new StringBuilder();
-		coords.append(groupId).append(":").append(artifactId);
-		if (classifier != null && !classifier.isEmpty())
-			coords.append(":").append(classifier);
-		coords.append(":").append(version);
-		return coords.toString();
-	}
-
-	private String coords(final Artifact artifact) {
-		return coords(artifact.getGroupId(), artifact.getArtifactId(), artifact.getClassifier(), artifact.getVersion());
-	}
-
-	private String coords(final Dependency dependency) {
-		return coords(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getVersion());
-	}
-
-	private String coordsWithExclusions(final Dependency dependency) {
-		final StringBuilder coords = new StringBuilder(coords(dependency));
-		if (dependency.getExclusions().size() > 0) {
-			final StringBuilder exclusionsList = new StringBuilder();
-			int i = 0;
-			for (final Exclusion exclusion : dependency.getExclusions()) {
-				if (i > 0) exclusionsList.append(",");
-				exclusionsList.append(exclusion.getGroupId()).append(":").append(exclusion.getArtifactId());
-				i++;
-			}
-			coords.append("(").append(exclusionsList.toString()).append(")");
-		}
-		return coords.toString();
-	}
-
-	// JAR & FILE HELPERS
-
-	private String addDirectoryToJar(final JarOutputStream jar, final String outputDirectory) throws IOException {
-
-		// format the output directory
-		String formattedOutputDirectory = "";
-		if (outputDirectory != null && !outputDirectory.isEmpty()) {
-			if (!outputDirectory.endsWith("/")) {
-				formattedOutputDirectory = outputDirectory + File.separatorChar;
-			} else {
-				formattedOutputDirectory = outputDirectory;
-			}
-		}
-
-		if (!formattedOutputDirectory.isEmpty()) {
-			try {
-				jar.putNextEntry(new ZipEntry(formattedOutputDirectory));
-				jar.closeEntry();
-			} catch (final ZipException ignore) {} // ignore duplicate entries and other errors
-		}
-		return formattedOutputDirectory;
-	}
-
-	private JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
-		try {
-			debug("\t[Added to Jar]: " + name);
-			jar.putNextEntry(new ZipEntry(name));
-			IOUtil.copy(input, jar);
-			jar.closeEntry();
-		} catch (final ZipException ignore) {} // ignore duplicate entries and other errors
-		IOUtil.close(input);
-		return jar;
-	}
-
 	private File createExecCopyProcess(final File jar, final String prefix, final String extension) throws IOException {
 		final File x = new File(jar.getPath().replace(".jar", extension));
 		if (x.exists()) {
@@ -908,12 +839,8 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private File resolveCapsule() throws IOException {
 		if (this.resolvedCapsuleProjectFile == null) {
-			final ArtifactResult artifactResult;
-			try {
-				artifactResult = this.resolve(CAPSULE_GROUP, "capsule", null, capsuleVersion);
-			} catch (final ArtifactResolutionException e) {
-				throw new IOException("Capsule not found from repos");
-			}
+			final ArtifactResult artifactResult = this.resolve(CAPSULE_GROUP, "capsule", null, capsuleVersion);
+			if (artifactResult == null) throw new IOException("Capsule not found from repos");
 			this.resolvedCapsuleProjectFile = artifactResult.getArtifact().getFile();
 		}
 		return this.resolvedCapsuleProjectFile;
@@ -921,41 +848,22 @@ public class CapsuleMojo extends AbstractMojo {
 
 	private File resolveCapsuleMaven() throws IOException {
 		if (this.resolvedCapsuleMavenProjectFile == null) {
-			final ArtifactResult artifactResult;
-			try {
-				artifactResult = this.resolve(CAPSULE_GROUP, "capsule-maven", null, capsuleMavenVersion);
-			} catch (final ArtifactResolutionException e) {
-				throw new IOException("CapsuleMaven not found from repos");
-			}
+			final ArtifactResult artifactResult = this.resolve(CAPSULE_GROUP, "capsule-maven", null, capsuleMavenVersion);
+			if (artifactResult == null) throw new IOException("CapsuleMaven not found from repos");
 			this.resolvedCapsuleMavenProjectFile = artifactResult.getArtifact().getFile();
 		}
 		return this.resolvedCapsuleMavenProjectFile;
 	}
 
-	private ArtifactResult resolve(final String groupId, final String artifactId, final String classifier, final String version) throws
-		ArtifactResolutionException {
-		String coords = groupId + ":" + artifactId;
-		if (classifier != null && !classifier.isEmpty()) coords += ":" + classifier;
-		if (version != null && !version.isEmpty()) coords += ":" + version;
-		return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(coords), remoteRepos, null));
-	}
+	private Set<Dependency> includedDependencies() { return cleanDependencies(appDependencies(), this.includeAppDep, pluginDependencies(), this.includePluginDep); }
+	private Set<Dependency> includedDirectDependencies() { return cleanDependencies(appDirectDependencies(), this.includeAppDep, pluginDirectDependencies(), this.includePluginDep); }
+	private Set<Artifact> includedDependencyArtifacts() { return cleanArtifacts(appDependencyArtifacts(), this.includeAppDep, pluginDependencyArtifacts(), this.includePluginDep); }
+	private Set<Artifact> includedDirectDependencyArtifacts() { return cleanArtifacts(appDirectDependencyArtifacts(), this.includeAppDep, pluginDirectDependencyArtifacts(), this.includePluginDep); }
 
-	private List<Dependency> directDependencies() { return project.getDependencies(); }
-	private Set<Artifact> directDependencyArtifacts() { return project.getDependencyArtifacts(); }
-	private List<Dependency> dependencies() { return project.getTestDependencies(); }
-	private Set<Artifact> dependencyArtifacts() { return project.getArtifacts(); }
+	private Set<Dependency> resolvedDependencies() { return cleanDependencies(appDependencies(), this.resolveAppDep, pluginDependencies(), this.resolvePluginDep); }
+	private Set<Dependency> resolvedDirectDependencies() { return cleanDependencies(appDirectDependencies(), this.resolveAppDep, pluginDirectDependencies(), this.resolvePluginDep); }
 
 	// HELPER OBJECTS
-
-	public static class Pair<K, V> {
-		public K key;
-		public V value;
-		public Pair() {}
-		public Pair(final K key, final V value) {
-			this.key = key;
-			this.value = value;
-		}
-	}
 
 	public enum Type {
 		empty, thin, fat;
@@ -982,22 +890,4 @@ public class CapsuleMojo extends AbstractMojo {
 		public String[] includes;
 	}
 
-	// LOG
-
-	private void debug(final String message) { getLog().debug(LOG_PREFIX + message); }
-	private void info(final String message) { getLog().info(LOG_PREFIX + message); }
-	private void warn(final String message) { getLog().warn(LOG_PREFIX + message); }
-	private void printManifest(final Manifest manifest) {
-		info("\t[Manifest]:");
-		for (final Map.Entry<Object, Object> attr : manifest.getMainAttributes().entrySet()) {
-			info("\t\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
-		}
-		for (final Map.Entry<String, Attributes> entry : manifest.getEntries().entrySet()) {
-			info("");
-			info("\t\tName:" + entry.getKey());
-			for (final Map.Entry<Object, Object> attr : entry.getValue().entrySet()) {
-				info("\t\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
-			}
-		}
-	}
 }

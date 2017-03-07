@@ -256,7 +256,7 @@ And similarly an ```empty``` capsule is done with the following:
 
 ### Including Dependencies based on source
 
-The source of dependencies is taken from two places. Firstly, from the ```<dependencies>``` tag defined under the root ```<project>``` tag, namely the app dependencies. Secondly the dependencies defines under the ```<dependencies>``` tag within the ```<plugin>``` tag for this plugin, also known as the plugin dependencies.
+The source of dependencies is taken from two places. Firstly, from the ```<dependencies>``` tag defined under the root ```<project>``` tag, namely the app dependencies. Secondly the dependencies defined under the ```<dependencies>``` tag within the ```<plugin>``` tag for this plugin, also known as the plugin dependencies.
 
 You can choose to include a source by using ```<includeAppDep>true</includeAppDep>``` or ```<includePluginDep>true</includeAppDep>```.
 
@@ -264,6 +264,10 @@ You can choose to include a source by using ```<includeAppDep>true</includeAppDe
 ### Including Dependencies based on scope
 
 You can include certain dependencies by setting the scope of the dependency to something that you will be including in the built capsule.
+
+All possible options for scope are ```compile```, ```runtime```, ```provided```, ```system``` or ```test```.
+
+Note that the plugin dependencies can only have scope ```compile```, ```runtime``` or ```system```.
 
 So you could set your dependency to scope ```runtime``` like so:
 
