@@ -141,21 +141,6 @@ public class CapsuleMojo extends SuperMojo {
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 
-//		System.out.println("PLUGIN-LIST:");
-//		for (final Dependency dep : this.plugin.getDependencies()) {
-//			System.out.println(coords(dep) + dep.getScope());
-//		}
-//
-//		System.out.println("PLUGIN-DIRECT-DEPENDENCIES:");
-//		for (final Dependency dep : pluginDirectDependencies()) {
-//			System.out.println(coords(dep) + dep.getScope());
-//		}
-//
-//		System.out.println("PLUGIN-DEPENDENCIES:");
-//		for (final Dependency dep : pluginDependencies()) {
-//			System.out.println(coords(dep) + "(" + dep.getScope() + ")");
-//		}
-
 		// check for type (this overrides custom behaviour)
 		if (type == Type.empty) {
 			includeApp = false;

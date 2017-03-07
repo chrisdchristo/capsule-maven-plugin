@@ -61,15 +61,13 @@ public abstract class SuperMojo extends AbstractMojo {
 	// DEPENDENCIES
 
 	protected Set<Dependency> appDependencies() { return set(project.getTestDependencies()); }
-	protected Set<Dependency> pluginDependencies() { return getDependenciesOf(set(plugin().getDependencies()), true); }
-
 	protected Set<Dependency> appDirectDependencies() { return set(project.getDependencies()); }
-	protected Set<Dependency> pluginDirectDependencies() { return set(plugin().getDependencies()); }
-
 	protected Set<Artifact> appDependencyArtifacts() { return project.getArtifacts(); }
-	protected Set<Artifact> pluginDependencyArtifacts() { return getDependencyArtifactsOf(set(plugin().getDependencies()), true); }
-
 	protected Set<Artifact> appDirectDependencyArtifacts() { return project.getDependencyArtifacts(); }
+
+	protected Set<Dependency> pluginDependencies() { return getDependenciesOf(set(plugin().getDependencies()), true); }
+	protected Set<Dependency> pluginDirectDependencies() { return set(plugin().getDependencies()); }
+	protected Set<Artifact> pluginDependencyArtifacts() { return getDependencyArtifactsOf(set(plugin().getDependencies()), true); }
 	protected Set<Artifact> pluginDirectDependencyArtifacts() { return toArtifacts(set(plugin().getDependencies())); }
 
 
@@ -117,6 +115,7 @@ public abstract class SuperMojo extends AbstractMojo {
 			artifact.setScope(ar.getRequest().getDependencyNode().getDependency().getScope());
 			artifact.setOptional(ar.getRequest().getDependencyNode().getDependency().isOptional());
 		}
+		if (artifact.getScope() == null || artifact.getScope().isEmpty()) artifact.setScope("compile");
 		artifact.setFile(ar.getArtifact().getFile());
 		return artifact;
 	}
@@ -125,6 +124,7 @@ public abstract class SuperMojo extends AbstractMojo {
 		if (dependency == null) return null;
 		final Artifact artifact = toArtifact(resolve(dependency));
 		artifact.setScope(dependency.getScope());
+		if (artifact.getScope() == null || artifact.getScope().isEmpty()) artifact.setScope("compile");
 		return artifact;
 	}
 
@@ -137,6 +137,7 @@ public abstract class SuperMojo extends AbstractMojo {
 		dependency.setScope(artifact.getScope());
 		dependency.setClassifier(artifact.getClassifier());
 		dependency.setOptional(artifact.isOptional());
+		if (dependency.getScope() == null || dependency.getScope().isEmpty()) dependency.setScope("compile");
 		return dependency;
 	}
 
@@ -145,18 +146,16 @@ public abstract class SuperMojo extends AbstractMojo {
 	}
 
 	private Set<Artifact> getDependencyArtifactsOf(final Dependency dependency, final boolean includeRoot) {
-		info("TEST Getting dependencies of [" + coords(dependency) + "]");
 		final Set<Artifact> artifacts = new HashSet<>();
 		if (includeRoot) artifacts.add(toArtifact(dependency));
 		for (final ArtifactResult ar : resolveDependencies(dependency)) {
 			final Artifact artifact = toArtifact(ar);
-			info("TEST \t found: [" + coords(artifact) + "]");
 
 			// if null set to default compile
 			if (artifact.getScope() == null || artifact.getScope().isEmpty()) artifact.setScope("compile");
 
 			// skip any deps that aren't compile or runtime
-			if (!artifact.getScope().equals("compile") || !artifact.getScope().equals("runtime")) continue;
+			if (!artifact.getScope().equals("compile") && !artifact.getScope().equals("runtime")) continue;
 
 			// set direct-scope on transitive deps
 			if (dependency.getScope().equals("provided")) artifact.setScope("provided");
@@ -234,7 +233,7 @@ public abstract class SuperMojo extends AbstractMojo {
 		return coords(artifact.getGroupId(), artifact.getArtifactId(), artifact.getClassifier(), artifact.getVersion());
 	}
 
-	private String coords(final Dependency dependency) {
+	protected String coords(final Dependency dependency) {
 		return coords(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getVersion());
 	}
 
@@ -260,13 +259,14 @@ public abstract class SuperMojo extends AbstractMojo {
 	private Set<Dependency> cleanDependencies(final Set<Dependency> dependencies) {
 		final Set<Dependency> dependenciesClean = new HashSet<>();
 		for (final Dependency dependencyA : dependencies) {
+			boolean found = false;
 			for (final Dependency dependencyB : dependenciesClean) {
-				if (dependencyA.getGroupId().equals(dependencyB.getGroupId()) &&
-						dependencyA.getArtifactId().equals(dependencyB.getArtifactId()) &&
-						dependencyA.getVersion().equals(dependencyB.getVersion()))
-					continue;
+				if (coords(dependencyA).equals(coords(dependencyB))) {
+					found = true;
+					break;
+				}
 			}
-			dependenciesClean.add(dependencyA);
+			if (!found) dependenciesClean.add(dependencyA);
 		}
 		return dependenciesClean;
 	}
@@ -275,13 +275,14 @@ public abstract class SuperMojo extends AbstractMojo {
 	private Set<Artifact> cleanArtifacts(final Set<Artifact> artifacts) {
 		final Set<Artifact> artifactsClean = new HashSet<>();
 		for (final Artifact artifactA : artifacts) {
+			boolean found = false;
 			for (final Artifact artifactB : artifactsClean) {
-				if (artifactA.getGroupId().equals(artifactB.getGroupId()) &&
-						artifactA.getArtifactId().equals(artifactB.getArtifactId()) &&
-						artifactA.getVersion().equals(artifactB.getVersion()))
-					continue;
+				if (coords(artifactA).equals(coords(artifactB))){
+					found = true;
+					break;
+				}
 			}
-			artifactsClean.add(artifactA);
+			if (!found) artifactsClean.add(artifactA);
 		}
 		return artifactsClean;
 	}
