@@ -7,7 +7,6 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
-import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.codehaus.plexus.util.IOUtil;
@@ -29,12 +28,20 @@ import java.util.*;
 import java.util.jar.*;
 import java.util.zip.ZipEntry;
 
-@Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.TEST, requiresDependencyResolution
-	= ResolutionScope.RUNTIME_PLUS_SYSTEM)
-public class CapsuleMojo extends SuperMojo {
+/**
+ * Mojo to generate a Capsule jar
+ */
+@org.apache.maven.plugins.annotations.Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, requiresDependencyCollection = ResolutionScope.TEST, requiresDependencyResolution
+		= ResolutionScope.RUNTIME_PLUS_SYSTEM)
+public class CapsuleMojo extends Mojo {
 
-	public final String pluginKey() { return "com.github.chrisdchristo:capsule-maven-plugin"; }
-	public final String logPrefix() { return "[CapsuleMavenPlugin] "; }
+	public final String pluginKey() {
+		return "com.github.chrisdchristo:capsule-maven-plugin";
+	}
+
+	public final String logPrefix() {
+		return "[CapsuleMavenPlugin] ";
+	}
 
 	private static final String DEFAULT_CAPSULE_VERSION = "1.0.3";
 	private static final String DEFAULT_CAPSULE_MAVEN_VERSION = "1.0.3";
@@ -254,7 +261,9 @@ public class CapsuleMojo extends SuperMojo {
 							return FileVisitResult.CONTINUE;
 						}
 					});
-				} catch (final IOException e) { e.printStackTrace(); }
+				} catch (final IOException e) {
+					e.printStackTrace();
+				}
 
 				if (!capletFiles.containsKey(caplet))
 					if (!caplet.contains(":")) // not from repo
@@ -287,8 +296,8 @@ public class CapsuleMojo extends SuperMojo {
 
 		// double check outputDir is not in some undesired locations
 		final List<String> illegalOutputPaths = Arrays.asList(
-			this.buildDir.getPath() + File.separatorChar + "classes",
-			this.buildDir.getPath() + File.separatorChar + "classes/"
+				this.buildDir.getPath() + File.separatorChar + "classes",
+				this.buildDir.getPath() + File.separatorChar + "classes/"
 		);
 		if (illegalOutputPaths.contains(this.outputDir.getPath())) {
 			this.outputDir = this.buildDir;
@@ -436,7 +445,8 @@ public class CapsuleMojo extends SuperMojo {
 							if (property.key != null && property.value != null) {
 								modePropertiesList.append(property.key).append("=").append(property.value).append(" ");
 							}
-						if (modePropertiesList.length() > 0) modeAttributes.put(new Attributes.Name("System-Properties"), modePropertiesList.toString());
+						if (modePropertiesList.length() > 0)
+							modeAttributes.put(new Attributes.Name("System-Properties"), modePropertiesList.toString());
 					}
 					// finally add the mode's properties and manifest entries to its own section.
 					if (!modeAttributes.isEmpty()) manifestBuild.getEntries().put(mode.name, modeAttributes);
@@ -542,12 +552,12 @@ public class CapsuleMojo extends SuperMojo {
 
 			// check against requested scopes
 			if (
-				(includeCompileDep && scope.equals("compile") && optionalMatch) ||
-					(includeRuntimeDep && scope.equals("runtime") && optionalMatch) ||
-					(includeProvidedDep && scope.equals("provided") && optionalMatch) ||
-					(includeSystemDep && scope.equals("system") && optionalMatch) ||
-					(includeTestDep && scope.equals("test") && optionalMatch)
-				) {
+					(includeCompileDep && scope.equals("compile") && optionalMatch) ||
+							(includeRuntimeDep && scope.equals("runtime") && optionalMatch) ||
+							(includeProvidedDep && scope.equals("provided") && optionalMatch) ||
+							(includeSystemDep && scope.equals("system") && optionalMatch) ||
+							(includeTestDep && scope.equals("test") && optionalMatch)
+					) {
 				addToJar(artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
 				info("\t[Embedded-Dependency] " + coords(artifact) + "(" + scope + ")");
 			} else
@@ -591,56 +601,50 @@ public class CapsuleMojo extends SuperMojo {
 		if (dependencySets == null) return;
 
 		for (final DependencySet dependencySet : dependencySets) {
-			for (final Object artifactObject : project.getDependencyArtifacts()) {
-				final Artifact artifact = (Artifact) artifactObject;
-				if (dependencySet.groupId.equals(artifact.getGroupId()) && dependencySet.artifactId.equals(artifact.getArtifactId())) {
-					if (dependencySet.version == null || dependencySet.version.equals(artifact.getVersion())) {
 
-						if (artifact.getFile() == null) {
-							warn("Could not resolve dependency: " + dependencySet.groupId + ":" + dependencySet.artifactId + ":" + dependencySet.version);
-							continue;
-						}
+			final Artifact artifact = toArtifact(resolve(dependencySet.toString()));
 
-						final JarFile jarFile = new JarFile(artifact.getFile());
+			if (artifact == null || artifact.getFile() == null) {
+				warn("\t[DependencySet]: Resolution Fail | " + dependencySet.toString());
+				continue;
+			}
 
-						final String outputDirectory = addDirectoryToJar(jar, dependencySet.outputDirectory);
+			final JarFile jarFile = new JarFile(artifact.getFile());
 
-						// if includes is set add only specified
-						if (dependencySet.includes != null && dependencySet.includes.length > 0) {
-							for (final String include : dependencySet.includes) {
-								final ZipEntry entry = jarFile.getEntry(include);
-								if (entry != null) {
-									addToJar(outputDirectory + include, jarFile.getInputStream(entry), jar);
-									info("\t[DependencySet]: Embedded " + outputDirectory + include + " from " + artifact.getFile());
-								} else {
-									warn(include + " not found in " + artifact.getFile());
-								}
-							}
+			final String outputDirectory = addDirectoryToJar(jar, dependencySet.outputDirectory);
 
-							// else add whole file
-						} else {
-							if (!dependencySet.unpack) {
-								info("\t[DependencySet]: Adding " + artifact.getFile().getName() + " to " + outputDirectory);
-								addToJar(outputDirectory + artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
-							} else {
-								if (artifact.getType() != null && artifact.getType().equals("jar")) {
-									info("\t[DependencySet]: Adding (unpacked) " + artifact.getFile().getName() + " to " + outputDirectory);
-									final Enumeration<JarEntry> entries = jarFile.entries();
-									while (entries.hasMoreElements()) {
-										final JarEntry entry = entries.nextElement();
-										debug("\t\t[DependencySet]: Adding (unpacked) " + outputDirectory + entry.getName());
-										addToJar(outputDirectory + entry.getName(), jarFile.getInputStream(entry), jar);
-									}
-								} else {
-									warn("\t[DependencySet]: Cannot unpack " + artifact.getFile().getName() + " as it is not in jar format.");
-								}
-							}
+			// if includes is set add only specified
+			if (dependencySet.includes != null && dependencySet.includes.length > 0) {
+				for (final String include : dependencySet.includes) {
+					final ZipEntry entry = jarFile.getEntry(include);
+					if (entry != null) {
+						addToJar(outputDirectory + include, jarFile.getInputStream(entry), jar);
+						info("\t[DependencySet]: Embedded " + outputDirectory + include + " from " + coords(artifact));
+					} else {
+						warn(include + " not found in " + artifact.getFile());
+					}
+				}
+
+				// else add whole file
+			} else {
+				if (!dependencySet.unpack) {
+					info("\t[DependencySet]: Adding " + artifact.getFile().getName() + " to " + outputDirectory);
+					addToJar(outputDirectory + artifact.getFile().getName(), new FileInputStream(artifact.getFile()), jar);
+				} else {
+					if (artifact.getType() != null && artifact.getType().equals("jar")) {
+						info("\t[DependencySet]: Adding (unpacked) " + artifact.getFile().getName() + " to " + outputDirectory);
+						final Enumeration<JarEntry> entries = jarFile.entries();
+						while (entries.hasMoreElements()) {
+							final JarEntry entry = entries.nextElement();
+							debug("\t\t[DependencySet]: Adding (unpacked) " + outputDirectory + entry.getName());
+							addToJar(outputDirectory + entry.getName(), jarFile.getInputStream(entry), jar);
 						}
 					} else {
-						warn("\t[DependencySet]: Artifact version mismatch: " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion());
+						warn("\t[DependencySet]: Cannot unpack " + artifact.getFile().getName() + " as it is not in jar format.");
 					}
 				}
 			}
+
 		}
 	}
 
@@ -713,12 +717,12 @@ public class CapsuleMojo extends SuperMojo {
 
 			// check against requested scopes
 			if (
-				(includeCompileDep && scope.equals("compile") && optionalMatch) ||
-					(includeRuntimeDep && scope.equals("runtime") && optionalMatch) ||
-					(includeProvidedDep && scope.equals("provided") && optionalMatch) ||
-					(includeSystemDep && scope.equals("system") && optionalMatch) ||
-					(includeTestDep && scope.equals("test") && optionalMatch)
-				)
+					(includeCompileDep && scope.equals("compile") && optionalMatch) ||
+							(includeRuntimeDep && scope.equals("runtime") && optionalMatch) ||
+							(includeProvidedDep && scope.equals("provided") && optionalMatch) ||
+							(includeSystemDep && scope.equals("system") && optionalMatch) ||
+							(includeTestDep && scope.equals("test") && optionalMatch)
+					)
 				artifactList.append(coordsWithExclusions(dependency)).append(" ");
 		}
 
@@ -748,12 +752,12 @@ public class CapsuleMojo extends SuperMojo {
 
 			// check against requested scopes
 			if (
-				(resolveCompileDep && scope.equals("compile") && optionalMatch) ||
-					(resolveRuntimeDep && scope.equals("runtime") && optionalMatch) ||
-					(resolveProvidedDep && scope.equals("provided") && optionalMatch) ||
-					(resolveSystemDep && scope.equals("system") && optionalMatch) ||
-					(resolveTestDep && scope.equals("test") && optionalMatch)
-				)
+					(resolveCompileDep && scope.equals("compile") && optionalMatch) ||
+							(resolveRuntimeDep && scope.equals("runtime") && optionalMatch) ||
+							(resolveProvidedDep && scope.equals("provided") && optionalMatch) ||
+							(resolveSystemDep && scope.equals("system") && optionalMatch) ||
+							(resolveTestDep && scope.equals("test") && optionalMatch)
+					)
 				dependenciesList.append(coordsWithExclusions(dependency)).append(" ");
 		}
 
@@ -840,13 +844,29 @@ public class CapsuleMojo extends SuperMojo {
 		return this.resolvedCapsuleMavenProjectFile;
 	}
 
-	private Set<Dependency> includedDependencies() { return cleanDependencies(appDependencies(), this.includeAppDep, pluginDependencies(), this.includePluginDep); }
-	private Set<Dependency> includedDirectDependencies() { return cleanDependencies(appDirectDependencies(), this.includeAppDep, pluginDirectDependencies(), this.includePluginDep); }
-	private Set<Artifact> includedDependencyArtifacts() { return cleanArtifacts(appDependencyArtifacts(), this.includeAppDep, pluginDependencyArtifacts(), this.includePluginDep); }
-	private Set<Artifact> includedDirectDependencyArtifacts() { return cleanArtifacts(appDirectDependencyArtifacts(), this.includeAppDep, pluginDirectDependencyArtifacts(), this.includePluginDep); }
+	private Set<Dependency> includedDependencies() {
+		return cleanDependencies(appDependencies(), this.includeAppDep, pluginDependencies(), this.includePluginDep);
+	}
 
-	private Set<Dependency> resolvedDependencies() { return cleanDependencies(appDependencies(), this.resolveAppDep, pluginDependencies(), this.resolvePluginDep); }
-	private Set<Dependency> resolvedDirectDependencies() { return cleanDependencies(appDirectDependencies(), this.resolveAppDep, pluginDirectDependencies(), this.resolvePluginDep); }
+	private Set<Dependency> includedDirectDependencies() {
+		return cleanDependencies(appDirectDependencies(), this.includeAppDep, pluginDirectDependencies(), this.includePluginDep);
+	}
+
+	private Set<Artifact> includedDependencyArtifacts() {
+		return cleanArtifacts(appDependencyArtifacts(), this.includeAppDep, pluginDependencyArtifacts(), this.includePluginDep);
+	}
+
+	private Set<Artifact> includedDirectDependencyArtifacts() {
+		return cleanArtifacts(appDirectDependencyArtifacts(), this.includeAppDep, pluginDirectDependencyArtifacts(), this.includePluginDep);
+	}
+
+	private Set<Dependency> resolvedDependencies() {
+		return cleanDependencies(appDependencies(), this.resolveAppDep, pluginDependencies(), this.resolvePluginDep);
+	}
+
+	private Set<Dependency> resolvedDirectDependencies() {
+		return cleanDependencies(appDirectDependencies(), this.resolveAppDep, pluginDirectDependencies(), this.resolvePluginDep);
+	}
 
 	// HELPER OBJECTS
 
@@ -863,10 +883,15 @@ public class CapsuleMojo extends SuperMojo {
 	public static class DependencySet {
 		public String groupId;
 		public String artifactId;
+		public String classifier;
 		public String version;
 		public String outputDirectory = "/";
 		public String[] includes;
 		public boolean unpack = false; // will unpack file of jar, zip, tar.gz, and tar.bz
+
+		public String toString() {
+			return coords(groupId, artifactId, classifier, version);
+		}
 	}
 
 	public static class FileSet {

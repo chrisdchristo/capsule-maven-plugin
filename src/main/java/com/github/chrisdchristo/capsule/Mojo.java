@@ -28,47 +28,50 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 
-public abstract class SuperMojo extends AbstractMojo {
+/**
+ * Super class with generic methods
+ */
+public abstract class Mojo extends AbstractMojo {
 
 	/**
 	 * AETHER REPO LINK
 	 */
 	@Component
-	protected RepositorySystem repoSystem = null;
+	RepositorySystem repoSystem = null;
 	@Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
-	protected RepositorySystemSession repoSession = null;
+	RepositorySystemSession repoSession = null;
 	@Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
-	protected List<RemoteRepository> remoteRepos = null;
+	List<RemoteRepository> remoteRepos = null;
 	@Parameter(defaultValue = "${project.build.finalName}", readonly = true)
-	protected String finalName = null;
+	String finalName = null;
 	@Parameter(defaultValue = "${project.build.directory}")
-	protected File buildDir = null;
+	File buildDir = null;
 	@Parameter(defaultValue = "${project.basedir}")
-	protected File baseDir = null;
+	File baseDir = null;
 
 
 	/**
 	 * Project
 	 */
 	@Parameter(defaultValue = "${project}", readonly = true)
-	protected MavenProject project = null;
+	MavenProject project = null;
 
-	protected final MavenProjectHelper helper = new DefaultMavenProjectHelper();
+	final MavenProjectHelper helper = new DefaultMavenProjectHelper();
 
 	abstract String pluginKey();
 	abstract String logPrefix();
 
 	// DEPENDENCIES
 
-	protected Set<Dependency> appDependencies() { return set(project.getTestDependencies()); }
-	protected Set<Dependency> appDirectDependencies() { return set(project.getDependencies()); }
-	protected Set<Artifact> appDependencyArtifacts() { return project.getArtifacts(); }
-	protected Set<Artifact> appDirectDependencyArtifacts() { return project.getDependencyArtifacts(); }
+	Set<Dependency> appDependencies() { return set(project.getTestDependencies()); }
+	Set<Dependency> appDirectDependencies() { return set(project.getDependencies()); }
+	Set<Artifact> appDependencyArtifacts() { return project.getArtifacts(); }
+	Set<Artifact> appDirectDependencyArtifacts() { return project.getDependencyArtifacts(); }
 
-	protected Set<Dependency> pluginDependencies() { return getDependenciesOf(set(plugin().getDependencies()), true); }
-	protected Set<Dependency> pluginDirectDependencies() { return set(plugin().getDependencies()); }
-	protected Set<Artifact> pluginDependencyArtifacts() { return getDependencyArtifactsOf(set(plugin().getDependencies()), true); }
-	protected Set<Artifact> pluginDirectDependencyArtifacts() { return toArtifacts(set(plugin().getDependencies())); }
+	Set<Dependency> pluginDependencies() { return getDependenciesOf(set(plugin().getDependencies()), true); }
+	Set<Dependency> pluginDirectDependencies() { return set(plugin().getDependencies()); }
+	Set<Artifact> pluginDependencyArtifacts() { return getDependencyArtifactsOf(set(plugin().getDependencies()), true); }
+	Set<Artifact> pluginDirectDependencyArtifacts() { return toArtifacts(set(plugin().getDependencies())); }
 
 
 	// RESOLVERS
@@ -81,8 +84,11 @@ public abstract class SuperMojo extends AbstractMojo {
 		return resolve(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getVersion());
 	}
 
-	protected ArtifactResult resolve(final String groupId, final String artifactId, final String classifier, final String version) {
-		final String coords = coords(groupId, artifactId, classifier, version);
+	ArtifactResult resolve(final String groupId, final String artifactId, final String classifier, final String version) {
+		return resolve(coords(groupId, artifactId, classifier, version));
+	}
+
+	ArtifactResult resolve(final String coords) {
 		try {
 			return repoSystem.resolveArtifact(repoSession, new ArtifactRequest(new DefaultArtifact(coords), remoteRepos, null));
 		} catch (final ArtifactResolutionException e) {
@@ -101,7 +107,7 @@ public abstract class SuperMojo extends AbstractMojo {
 		}
 	}
 
-	private Artifact toArtifact(final ArtifactResult ar) {
+	Artifact toArtifact(final ArtifactResult ar) {
 		if (ar == null) return null;
 		final Artifact artifact = new org.apache.maven.artifact.DefaultArtifact(
 				ar.getArtifact().getGroupId(),
@@ -200,111 +206,9 @@ public abstract class SuperMojo extends AbstractMojo {
 		return cleanArtifacts(artifacts);
 	}
 
-	// HELPERS
-
-	public static class Pair<K, V> {
-		public K key;
-		public V value;
-		public Pair() {}
-		public Pair(final K key, final V value) {
-			this.key = key;
-			this.value = value;
-		}
-	}
-
-	private <T> Set<T> set(final List<T> list) {
-		return new HashSet<>(list);
-	}
-
-
-	// COORDS
-
-	private String coords(final String groupId, final String artifactId, final String classifier, final String version) {
-		final StringBuilder coords = new StringBuilder();
-		coords.append(groupId).append(":").append(artifactId);
-		if (classifier != null && !classifier.isEmpty())
-			coords.append(":").append(classifier);
-		if (version != null && !version.isEmpty())
-			coords.append(":").append(version);
-		return coords.toString();
-	}
-
-	protected String coords(final Artifact artifact) {
-		return coords(artifact.getGroupId(), artifact.getArtifactId(), artifact.getClassifier(), artifact.getVersion());
-	}
-
-	protected String coords(final Dependency dependency) {
-		return coords(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getVersion());
-	}
-
-	protected String coordsWithExclusions(final Dependency dependency) {
-		final StringBuilder coords = new StringBuilder(coords(dependency));
-		if (dependency.getExclusions().size() > 0) {
-			final StringBuilder exclusionsList = new StringBuilder();
-			int i = 0;
-			for (final Exclusion exclusion : dependency.getExclusions()) {
-				if (i > 0) exclusionsList.append(",");
-				exclusionsList.append(exclusion.getGroupId()).append(":").append(exclusion.getArtifactId());
-				i++;
-			}
-			coords.append("(").append(exclusionsList.toString()).append(")");
-		}
-		return coords.toString();
-	}
-
-
-	// CLEANERS
-
-	// clean any duplicates
-	private Set<Dependency> cleanDependencies(final Set<Dependency> dependencies) {
-		final Set<Dependency> dependenciesClean = new HashSet<>();
-		for (final Dependency dependencyA : dependencies) {
-			boolean found = false;
-			for (final Dependency dependencyB : dependenciesClean) {
-				if (coords(dependencyA).equals(coords(dependencyB))) {
-					found = true;
-					break;
-				}
-			}
-			if (!found) dependenciesClean.add(dependencyA);
-		}
-		return dependenciesClean;
-	}
-
-	// clean any duplicates
-	private Set<Artifact> cleanArtifacts(final Set<Artifact> artifacts) {
-		final Set<Artifact> artifactsClean = new HashSet<>();
-		for (final Artifact artifactA : artifacts) {
-			boolean found = false;
-			for (final Artifact artifactB : artifactsClean) {
-				if (coords(artifactA).equals(coords(artifactB))){
-					found = true;
-					break;
-				}
-			}
-			if (!found) artifactsClean.add(artifactA);
-		}
-		return artifactsClean;
-	}
-
-	protected Set<Dependency> cleanDependencies(final Set<Dependency> setA, final boolean includeA, final Set<Dependency> setB, final boolean includeB) {
-		final Set<Dependency> set = new HashSet<>();
-		if (includeA) set.addAll(setA);
-		if (includeB) set.addAll(setB);
-		return cleanDependencies(set);
-	}
-
-	protected Set<Artifact> cleanArtifacts(final Set<Artifact> setA, final boolean includeA, final Set<Artifact> setB, final boolean includeB) {
-		final Set<Artifact> set = new HashSet<>();
-		if (includeA) set.addAll(setA);
-		if (includeB) set.addAll(setB);
-		return cleanArtifacts(set);
-	}
-
-
 	// JAR & FILE HELPERS
 
-	protected String addDirectoryToJar(final JarOutputStream jar, final String outputDirectory) throws IOException {
+	String addDirectoryToJar(final JarOutputStream jar, final String outputDirectory) throws IOException {
 
 		// format the output directory
 		String formattedOutputDirectory = "";
@@ -325,7 +229,7 @@ public abstract class SuperMojo extends AbstractMojo {
 		return formattedOutputDirectory;
 	}
 
-	protected JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
+	JarOutputStream addToJar(final String name, final InputStream input, final JarOutputStream jar) throws IOException {
 		try {
 			debug("\t[Added to Jar]: " + name);
 			jar.putNextEntry(new ZipEntry(name));
@@ -339,10 +243,10 @@ public abstract class SuperMojo extends AbstractMojo {
 
 	// LOG
 
-	protected void debug(final String message) { getLog().debug(logPrefix() + message); }
-	protected void info(final String message) { getLog().info(logPrefix() + message); }
-	protected void warn(final String message) { getLog().warn(logPrefix() + message); }
-	protected void printManifest(final Manifest manifest) {
+	void debug(final String message) { getLog().debug(logPrefix() + message); }
+	void info(final String message) { getLog().info(logPrefix() + message); }
+	void warn(final String message) { getLog().warn(logPrefix() + message); }
+	void printManifest(final Manifest manifest) {
 		info("\t[Manifest]:");
 		for (final Map.Entry<Object, Object> attr : manifest.getMainAttributes().entrySet()) {
 			info("\t\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
@@ -354,6 +258,110 @@ public abstract class SuperMojo extends AbstractMojo {
 				info("\t\t" + attr.getKey().toString() + ": " + attr.getValue().toString());
 			}
 		}
+	}
+
+
+
+
+	// HELPERS
+
+	public static class Pair<K, V> {
+		public K key;
+		public V value;
+		public Pair() {}
+		public Pair(final K key, final V value) {
+			this.key = key;
+			this.value = value;
+		}
+	}
+
+	static <T> Set<T> set(final List<T> list) {
+		return new HashSet<>(list);
+	}
+
+
+	// COORDS
+
+	static String coords(final String groupId, final String artifactId, final String classifier, final String version) {
+		final StringBuilder coords = new StringBuilder();
+		coords.append(groupId).append(":").append(artifactId);
+		if (classifier != null && !classifier.isEmpty())
+			coords.append(":").append(classifier);
+		if (version != null && !version.isEmpty())
+			coords.append(":").append(version);
+		return coords.toString();
+	}
+
+	static String coords(final Artifact artifact) {
+		return coords(artifact.getGroupId(), artifact.getArtifactId(), artifact.getClassifier(), artifact.getVersion());
+	}
+
+	static String coords(final Dependency dependency) {
+		return coords(dependency.getGroupId(), dependency.getArtifactId(), dependency.getClassifier(), dependency.getVersion());
+	}
+
+	static String coordsWithExclusions(final Dependency dependency) {
+		final StringBuilder coords = new StringBuilder(coords(dependency));
+		if (dependency.getExclusions().size() > 0) {
+			final StringBuilder exclusionsList = new StringBuilder();
+			int i = 0;
+			for (final Exclusion exclusion : dependency.getExclusions()) {
+				if (i > 0) exclusionsList.append(",");
+				exclusionsList.append(exclusion.getGroupId()).append(":").append(exclusion.getArtifactId());
+				i++;
+			}
+			coords.append("(").append(exclusionsList.toString()).append(")");
+		}
+		return coords.toString();
+	}
+
+
+	// CLEANERS
+
+	// clean any duplicates
+	static Set<Dependency> cleanDependencies(final Set<Dependency> dependencies) {
+		final Set<Dependency> dependenciesClean = new HashSet<>();
+		for (final Dependency dependencyA : dependencies) {
+			boolean found = false;
+			for (final Dependency dependencyB : dependenciesClean) {
+				if (coords(dependencyA).equals(coords(dependencyB))) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) dependenciesClean.add(dependencyA);
+		}
+		return dependenciesClean;
+	}
+
+	// clean any duplicates
+	static Set<Artifact> cleanArtifacts(final Set<Artifact> artifacts) {
+		final Set<Artifact> artifactsClean = new HashSet<>();
+		for (final Artifact artifactA : artifacts) {
+			boolean found = false;
+			for (final Artifact artifactB : artifactsClean) {
+				if (coords(artifactA).equals(coords(artifactB))){
+					found = true;
+					break;
+				}
+			}
+			if (!found) artifactsClean.add(artifactA);
+		}
+		return artifactsClean;
+	}
+
+	static Set<Dependency> cleanDependencies(final Set<Dependency> setA, final boolean includeA, final Set<Dependency> setB, final boolean includeB) {
+		final Set<Dependency> set = new HashSet<>();
+		if (includeA) set.addAll(setA);
+		if (includeB) set.addAll(setB);
+		return cleanDependencies(set);
+	}
+
+	static Set<Artifact> cleanArtifacts(final Set<Artifact> setA, final boolean includeA, final Set<Artifact> setB, final boolean includeB) {
+		final Set<Artifact> set = new HashSet<>();
+		if (includeA) set.addAll(setA);
+		if (includeB) set.addAll(setB);
+		return cleanArtifacts(set);
 	}
 
 }
