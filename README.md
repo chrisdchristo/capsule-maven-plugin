@@ -606,6 +606,8 @@ So from above we copy over the myconfig.yml file that we have in our config fold
 
 You specify a number of `<fileSet>` which must contain the `<directory>` (the location of the folder to copy), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the `<directory>` to copy over.
 
+The `<include>` tag supports a single wildcard `*`. So for example `<include>*.yml</include>`, `<include>myconfig*</include>` or `<include>my*.yml</include>` can work.
+
 
 ## DependencySets
 

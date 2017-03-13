@@ -574,10 +574,8 @@ public class CapsuleMojo extends Mojo {
 				final File directory;
 				if (fileSetDir.isAbsolute()) {
 					directory = fileSetDir;
-					debug("\t[FileSet]: Use absolute Path: " + directory.getPath());
 				} else {
 					directory = new File(baseDir.getPath() + File.separatorChar + fileSet.directory);
-					debug("\t[FileSet]: Resolve relative Path: " + directory.getPath());
 				}
 
 				// warn & skip if not directory
@@ -588,10 +586,78 @@ public class CapsuleMojo extends Mojo {
 
 				final String outputDirectory = addDirectoryToJar(jar, fileSet.outputDirectory);
 
+				final Set<File> matchedEntries = new HashSet<>();
+
+				// get files entries based on direct files under dir (i.e ignore un sub dirs)
+				final Set<File> entries = new HashSet<>();
+				for (final File file : directory.listFiles()) {
+					if (!file.isDirectory())
+						entries.add(file);
+				}
+
+				for (final File entry : entries) {
+					System.out.println(entry.toString());
+				}
+
 				for (final String include : fileSet.includes) {
-					final FileInputStream fin = new FileInputStream(new File(directory, include));
-					addToJar(outputDirectory + include, fin, jar);
-					info("\t[FileSet]: Embedded " + outputDirectory + include + " from " + directory);
+
+					if (include.contains("*")) { // wildcard
+
+						// quick hack to find number of wildcards
+						final int starCount = include.length() - include.replace("*", "").length();
+
+						// max one wildcard allowed
+						if (starCount > 1) {
+							warn("\t[FileSet]: More than one asterisk (*) found in include, skipping... | " + include);
+							continue;
+						}
+
+						// if start
+						if (include.startsWith("*")) {
+							final String toMatch = include.substring(1);
+							for (final File entry : entries) {
+								if (entry.getName().endsWith(toMatch)) {
+									matchedEntries.add(entry);
+								}
+							}
+						}
+
+						// if end
+						else if (include.endsWith("*")) {
+							final String toMatch = include.substring(0, include.length() - 1);
+							for (final File entry : entries) {
+								if (entry.getName().startsWith(toMatch)) {
+									matchedEntries.add(entry);
+								}
+							}
+						}
+
+						// if middle (check start and end match)
+						else {
+							final String[] split = include.split("\\*");
+							for (final File entry : entries) {
+								if (entry.getName().startsWith(split[0]) && entry.getName().endsWith(split[1])) {
+									matchedEntries.add(entry);
+								}
+							}
+						}
+
+					} else { // match exact (no wildcard)
+						matchedEntries.add(new File(directory, include));
+					}
+
+
+					// add all entries matched
+
+					if (!matchedEntries.isEmpty()) {
+						for (final File entry : matchedEntries) {
+							addToJar(outputDirectory + entry.getName(), new FileInputStream(entry), jar);
+							info("\t[FileSet]: Embedded " + outputDirectory + entry.getName() + " from " + directory);
+						}
+					} else {
+						warn("\t[FileSet]: No matches found in " + directory);
+					}
+
 				}
 			}
 		}
