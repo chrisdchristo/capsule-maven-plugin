@@ -590,9 +590,13 @@ public class CapsuleMojo extends Mojo {
 
 				// get files entries based on direct files under dir (i.e ignore un sub dirs)
 				final Set<File> entries = new HashSet<>();
-				for (final File file : directory.listFiles()) {
-					if (!file.isDirectory())
-						entries.add(file);
+
+				final File[] files = directory.listFiles();
+				if (files != null) {
+					for (final File file : files) {
+						if (!file.isDirectory())
+							entries.add(file);
+					}
 				}
 
 				for (final File entry : entries) {
