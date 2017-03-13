@@ -35,7 +35,8 @@ Supports [Capsule v1.0.3](https://github.com/puniverse/capsule/releases/tag/v1.0
 - [Additional Manifest Entries](https://github.com/chrisdchristo/capsule-maven-plugin#additional-manifest-entries)
 - [Custom File Name](https://github.com/chrisdchristo/capsule-maven-plugin#custom-file-name)
 - [Modes](https://github.com/chrisdchristo/capsule-maven-plugin#modes)
-- [FileSets and DependencySets](https://github.com/chrisdchristo/capsule-maven-plugin#filesets-and-dependencysets)
+- [FileSets](https://github.com/chrisdchristo/capsule-maven-plugin#filesets)
+- [DependencySets](https://github.com/chrisdchristo/capsule-maven-plugin#dependencysets)
 - [Custom Capsule Version](https://github.com/chrisdchristo/capsule-maven-plugin#custom-capsule-version)
 - [Caplets](https://github.com/chrisdchristo/capsule-maven-plugin#caplets)
 - [Maven Exec Plugin Integration](https://github.com/chrisdchristo/capsule-maven-plugin#maven-exec-plugin-integration)
@@ -584,10 +585,10 @@ However, the mode's manifest entries will be appended to the existing set of ent
 
 Of course, you can define multiple modes.
 
-## FileSets and DependencySets
+## FileSets
 
-If you'd like to copy over specific files from some local folder or from files embedded in some dependency then you can use the
- assembly style `<fileSets>` and `<dependencySets>` in the `<configuration>` tag.
+If you'd like to copy over specific files from some local folder then you can use the
+ assembly style `<fileSets>` in the `<configuration>` tag.
 
 ```
 <fileSets>
@@ -600,6 +601,16 @@ If you'd like to copy over specific files from some local folder or from files e
 	</fileSet>
 </fileSets>
 ```
+
+So from above we copy over the myconfig.yml file that we have in our config folder and place it within the config directory in the capsule jar (the plugin will create this folder in the capsule jar).
+
+You specify a number of `<fileSet>` which must contain the `<directory>` (the location of the folder to copy), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the `<directory>` to copy over.
+
+
+## DependencySets
+
+If you'd like to copy over specific files from files embedded in some dependency then you can use the
+ assembly style `<dependencySets>` in the `<configuration>` tag.
 
 ```
 <dependencySets>
@@ -614,12 +625,12 @@ If you'd like to copy over specific files from some local folder or from files e
 </dependencySets>
 ```
 
-So from above we copy over the myconfig.yml file that we have in our config folder and place it within the config directory in the capsule jar (the plugin will create this folder in the capsule jar).
-And likewise with the dependency set defined, we pull the manifest file from within Google Guava's jar.
+So from the above we pull the manifest file from within Google Guava's jar and place it within the config directory in the capsule jar (the plugin will create this folder in the capsule jar).
 
-You specify a number of `<fileSet>` which must contain the `<directory>` (the location of the folder to copy), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the `<directory>` to copy over.
+You specify a number of `<dependencySet>` which must contain the coords (`<groupdId>`, `<artifactId>`, `<classifier>`, `<version>`) of a project dependency (the classifier and version are optional), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the dependency to copy over.
 
-You specify a number of `<dependencySet>` which must contain the GAV of a project dependency (the version is optional), the `<outputDirectory>` (the destination directory within the capsule jar) and finally a set of `<include>` to specify which files from the dependency to copy over.
+The `<include>` tag supports a single wildcard `*`. So for example `<include>META-INF/*</include>`, `<include>*MANIFEST.MF</include>` or `<include>META-INF/*.MF</include>` can work.
+
 
 You could also copy over the whole dependency directly if you leave out the ```includes``` tag:
 
@@ -645,6 +656,7 @@ You could also copy over the whole dependency in an **unpacked** form if you mar
 	</dependencySet>
 </dependencySets>
 ```
+
 
 ## Custom Capsule Version
 

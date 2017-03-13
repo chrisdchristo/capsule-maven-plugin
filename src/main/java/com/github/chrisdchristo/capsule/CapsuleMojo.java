@@ -604,6 +604,7 @@ public class CapsuleMojo extends Mojo {
 
 			final Artifact artifact = toArtifact(resolve(dependencySet.toString()));
 
+
 			if (artifact == null || artifact.getFile() == null) {
 				warn("\t[DependencySet]: Resolution Fail | " + dependencySet.toString());
 				continue;
@@ -611,18 +612,72 @@ public class CapsuleMojo extends Mojo {
 
 			final JarFile jarFile = new JarFile(artifact.getFile());
 
+			final Set<JarEntry> entries = set(jarFile.entries());
+
 			final String outputDirectory = addDirectoryToJar(jar, dependencySet.outputDirectory);
 
 			// if includes is set add only specified
 			if (dependencySet.includes != null && dependencySet.includes.length > 0) {
+				final Set<ZipEntry> matchedEntries = new HashSet<>();
+
 				for (final String include : dependencySet.includes) {
-					final ZipEntry entry = jarFile.getEntry(include);
-					if (entry != null) {
-						addToJar(outputDirectory + include, jarFile.getInputStream(entry), jar);
-						info("\t[DependencySet]: Embedded " + outputDirectory + include + " from " + coords(artifact));
-					} else {
-						warn(include + " not found in " + artifact.getFile());
+
+					if (include.contains("*")) { // wildcard
+
+						// quick hack to find number of wildcards
+						final int starCount = include.length() - include.replace("*", "").length();
+
+						// max one wildcard allowed
+						if (starCount > 1) {
+							warn("\t[DependencySet]: More than one asterisk (*) found in include, skipping... | " + include);
+							continue;
+						}
+
+						// if start
+						if (include.startsWith("*")) {
+							final String toMatch = include.substring(1);
+							for (final ZipEntry entry : entries) {
+								if (entry.getName().endsWith(toMatch)) {
+									matchedEntries.add(entry);
+								}
+							}
+						}
+
+						// if end
+						else if (include.endsWith("*")) {
+							final String toMatch = include.substring(0, include.length() - 1);
+							for (final ZipEntry entry : entries) {
+								if (entry.getName().startsWith(toMatch)) {
+									matchedEntries.add(entry);
+								}
+							}
+						}
+
+						// if middle (check start and end match)
+						else {
+							final String[] split = include.split("\\*");
+							for (final ZipEntry entry : entries) {
+								if (entry.getName().startsWith(split[0]) && entry.getName().endsWith(split[1])) {
+									matchedEntries.add(entry);
+								}
+							}
+						}
+
+					} else { // match exact (no wildcard)
+						matchedEntries.add(jarFile.getEntry(include));
 					}
+
+				}
+
+				// add all entries matched
+
+				if (!matchedEntries.isEmpty()) {
+					for (final ZipEntry entry : matchedEntries) {
+						addToJar(outputDirectory + entry.getName(), jarFile.getInputStream(entry), jar);
+						info("\t[DependencySet]: Embedded from " + coords(artifact) + " > " + outputDirectory + entry.getName());
+					}
+				} else {
+					warn("\t[DependencySet]: No matches found in " + artifact.getFile());
 				}
 
 				// else add whole file
@@ -633,9 +688,7 @@ public class CapsuleMojo extends Mojo {
 				} else {
 					if (artifact.getType() != null && artifact.getType().equals("jar")) {
 						info("\t[DependencySet]: Adding (unpacked) " + artifact.getFile().getName() + " to " + outputDirectory);
-						final Enumeration<JarEntry> entries = jarFile.entries();
-						while (entries.hasMoreElements()) {
-							final JarEntry entry = entries.nextElement();
+						for (final ZipEntry entry : entries) {
 							debug("\t\t[DependencySet]: Adding (unpacked) " + outputDirectory + entry.getName());
 							addToJar(outputDirectory + entry.getName(), jarFile.getInputStream(entry), jar);
 						}

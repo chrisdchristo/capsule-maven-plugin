@@ -279,6 +279,13 @@ public abstract class Mojo extends AbstractMojo {
 		return new HashSet<>(list);
 	}
 
+	static <T> Set<T> set(final Enumeration<T> enumeration) {
+		final Set<T> set = new HashSet<>();
+		while (enumeration.hasMoreElements())
+			set.add(enumeration.nextElement());
+		return set;
+	}
+
 
 	// COORDS
 
