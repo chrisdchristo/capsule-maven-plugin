@@ -178,9 +178,9 @@ And similarly for ```thin``` and ```empty```:
 </plugin>
 ```
 
-Note that the the three simple types apply to only the ```compile``` and ```runtime``` scoped dependencies (but cover the transitive dependencies). More on this later.
+Note that the three simple types apply to only the ```compile``` and ```runtime``` scoped dependencies (but cover the transitive dependencies). More on this later.
 
-If none of these quite fit, then the plugin can accommodate a wide range of different setups, its encouraged you build the capsule with your own specific requirements without being bogged down on the three specific types listed above.
+If none of these quite fit, then the plugin can accommodate a wide range of different setups, it is encouraged you build the capsule with your own specific requirements without being bogged down on the three specific types listed above.
 
 ### Custom Builds
 
