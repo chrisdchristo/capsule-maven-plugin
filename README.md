@@ -7,16 +7,13 @@ Capsule Maven Plugin
 
 A maven plugin to build a [capsule](https://github.com/puniverse/capsule) out of your app.
 
-- [Capsule | simple java deployment](https://medium.com/@chrisdchristo/capsule-simple-java-delpoyment-7a70be622375)
-- [Capsule & AWS | Java on the cloud](https://medium.com/@chrisdchristo/capsule-aws-java-on-the-cloud-4abe2d4d6c89)
-
 See more at [capsule](https://github.com/puniverse/capsule) and the [demo using the plugin](https://github.com/chrisdchristo/capsule-maven-plugin-demo).
 
 A pro? [Skip to the plugin reference](https://github.com/chrisdchristo/capsule-maven-plugin#reference).
 
 Requires java version 1.7+ and maven 3.1.x+
 
-Supports [Capsule v1.0.3](https://github.com/puniverse/capsule/releases/tag/v1.0.3) & [CapsuleMaven v1.0.3](https://github.com/puniverse/capsule-maven/releases/tag/v1.0.3) and below (It may also support new versions of Capsule, but use at your own risk).
+Supports [Capsule v1.0.3](https://github.com/puniverse/capsule/releases/tag/v1.0.3) & [CapsuleMaven v1.0.3](https://github.com/puniverse/capsule-maven/releases/tag/v1.0.3) and below (It may also work with new versions of Capsule, but use at your own risk).
 
 - [Building From Source](https://github.com/chrisdchristo/capsule-maven-plugin#building-from-source)
 - [Quick Start](https://github.com/chrisdchristo/capsule-maven-plugin#quick-start)
